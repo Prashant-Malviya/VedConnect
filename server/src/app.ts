@@ -25,6 +25,13 @@ export const createApp = (clientUrl: string): Application => {
     res.status(200).json({ success: true, message: "Server is healthy" });
   });
 
+  app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "VedConnect API is running",
+  });
+});
+
   // Error handler must always be registered last.
   app.use(errorHandler);
 

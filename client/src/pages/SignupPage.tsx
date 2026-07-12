@@ -1,6 +1,7 @@
 import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { toast } from "react-toastify";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Logo from "../components/Logo";
@@ -42,6 +43,7 @@ const SignupPage = () => {
     try {
       setIsSubmitting(true);
       await signup(name, email, password);
+      toast.success("Signup successfully");
       navigate("/login");
     } catch (err) {
       const message = axios.isAxiosError(err)
