@@ -1,6 +1,15 @@
 # 💬 VedConnect - Real-Time Chat Application
 
-A production-ready **real-time chat application** built with the **MERN Stack**, **TypeScript**, and **Socket.io**. It supports secure authentication, one-to-one messaging, community chat, online presence, typing indicators, and message delivery status.
+A production-ready real-time chat application built with the MERN Stack, TypeScript, and Socket.io. It supports secure authentication, one-to-one messaging, community chat, online presence, typing indicators, and message delivery status.
+
+## 🌐 Live Demo
+
+| Service | URL |
+|---------|-----|
+| 🚀 Frontend | https://ved-connect-wbg8.vercel.app/ |
+| 🔗 Backend API | https://vedconnect-if8e.onrender.com |
+| ❤️ Health Check | https://vedconnect-if8e.onrender.com/health |
+
 
 ---
 
