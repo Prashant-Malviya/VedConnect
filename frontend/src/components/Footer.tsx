@@ -40,13 +40,13 @@ const Footer = () => {
           <h4 className="text-white font-semibold mb-3">Developer</h4>
           <p className="text-purple-200/80 mb-3">Prashant Malviya</p>
           <div className="flex items-center gap-3">
-            <a href="https://github.com" target="_blank" rel="noreferrer" aria-label="GitHub" className="p-2 rounded-lg bg-white/10 hover:bg-gold-500 hover:text-purple-900 transition-colors">
+            <a href="https://github.com/Prashant-Malviya" target="_blank" rel="noreferrer" aria-label="GitHub" className="p-2 rounded-lg bg-white/10 hover:bg-gold-500 hover:text-purple-900 transition-colors">
               <Github className="w-4 h-4" />
             </a>
-            <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="p-2 rounded-lg bg-white/10 hover:bg-gold-500 hover:text-purple-900 transition-colors">
+            <a href="https://www.linkedin.com/in/prashant-malviya-57270b1b6/" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="p-2 rounded-lg bg-white/10 hover:bg-gold-500 hover:text-purple-900 transition-colors">
               <Linkedin className="w-4 h-4" />
             </a>
-            <a href="https://example.com" target="_blank" rel="noreferrer" aria-label="Portfolio" className="p-2 rounded-lg bg-white/10 hover:bg-gold-500 hover:text-purple-900 transition-colors">
+            <a href="https://prashantmalviya-portfolio.netlify.app/" target="_blank" rel="noreferrer" aria-label="Portfolio" className="p-2 rounded-lg bg-white/10 hover:bg-gold-500 hover:text-purple-900 transition-colors">
               <Globe className="w-4 h-4" />
             </a>
           </div>

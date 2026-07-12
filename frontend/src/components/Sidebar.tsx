@@ -12,6 +12,7 @@ interface SidebarProps {
   selectedChat: SelectedChat | null;
   onSelectCommunity: () => void;
   onSelectUser: (user: ConversationUser, conversation: Conversation | null) => void;
+  isMobile?: boolean;
 }
 
 const formatPreviewTime = (isoDate: string): string =>
@@ -25,6 +26,7 @@ const Sidebar = ({
   selectedChat,
   onSelectCommunity,
   onSelectUser,
+  isMobile = false,
 }: SidebarProps) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +44,11 @@ const Sidebar = ({
   const isCommunityActive = selectedChat?.kind === "community";
 
   return (
-    <div className="hidden md:flex flex-col w-72 shrink-0 bg-white/80 backdrop-blur rounded-3xl shadow-soft border border-purple-100/60 p-5 mr-5">
+    <div
+      className={`flex-col bg-white/80 backdrop-blur rounded-3xl shadow-soft border border-purple-100/60 p-5 ${
+        isMobile ? "flex w-full mb-4 md:hidden" : "hidden md:flex w-72 shrink-0 mr-5"
+      }`}
+    >
       <div className="rounded-2xl bg-soft-gradient p-4">
         <p className="text-[11px] font-semibold text-purple-400 uppercase tracking-wider mb-3">You</p>
         <div className="flex items-center gap-3">

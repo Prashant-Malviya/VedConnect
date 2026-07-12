@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import ChatWindow from "../components/ChatWindow";
 import { Message } from "../types/message.types";
 import { OnlineUser } from "../types/chat.types";
@@ -25,6 +26,8 @@ interface NotificationPayload {
 
 const ChatPage = () => {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
+  const { username: routeUsername } = useParams<{ username?: string }>();
   const username = user?.name || "";
   const userId = user?.id || "";
 
@@ -48,11 +51,6 @@ const ChatPage = () => {
         const [userList, conversationList] = await Promise.all([fetchUsers(), fetchConversations()]);
         setUsers(userList);
         setConversations(conversationList);
-
-        const community = conversationList.find((c) => c.type === "group");
-        if (community) {
-          setSelectedChat({ kind: "community", conversationId: community._id });
-        }
       } catch (err) {
         setError("Failed to load conversations");
       }
@@ -63,6 +61,43 @@ const ChatPage = () => {
   useEffect(() => {
     knownConversationIds.current = new Set(conversations.map((c) => c._id));
   }, [conversations]);
+
+  useEffect(() => {
+    if (!users.length || !conversations.length) return;
+
+    const normalizedRouteUsername = routeUsername?.trim().toLowerCase().replace(/-/g, " ");
+
+    if (normalizedRouteUsername === "community") {
+      const community = conversations.find((c) => c.type === "group");
+      if (community) {
+        setSelectedChat({ kind: "community", conversationId: community._id });
+      }
+      return;
+    }
+
+    if (normalizedRouteUsername) {
+      const matchedUser = users.find((u) => u.name.toLowerCase() === normalizedRouteUsername);
+      if (!matchedUser) {
+        setSelectedChat(null);
+        return;
+      }
+
+      const matchedConversation = conversations.find(
+        (c) => c.type === "private" && c.otherUser?.id === matchedUser.id
+      );
+      setSelectedChat({
+        kind: "private",
+        user: { id: matchedUser.id, name: matchedUser.name, email: matchedUser.email },
+        conversationId: matchedConversation?._id || null,
+      });
+      return;
+    }
+
+    const community = conversations.find((c) => c.type === "group");
+    if (community) {
+      setSelectedChat({ kind: "community", conversationId: community._id });
+    }
+  }, [routeUsername, users, conversations]);
 
   // Connect the shared socket instance now that we have a valid JWT, and
   // wire up all the realtime event listeners.
@@ -215,11 +250,14 @@ const ChatPage = () => {
 
   const handleSelectCommunity = () => {
     if (!communityConversation) return;
-    setSelectedChat({ kind: "community", conversationId: communityConversation._id });
+
+    const slug = "community";
+    navigate(`/chat/${encodeURIComponent(slug)}`);
   };
 
   const handleSelectUser = (chatUser: ConversationUser, conversation: Conversation | null) => {
-    setSelectedChat({ kind: "private", user: chatUser, conversationId: conversation?._id || null });
+    const slug = chatUser.name.trim().toLowerCase().replace(/\s+/g, "-");
+    navigate(`/chat/${encodeURIComponent(slug)}`);
   };
 
   const handleSend = async (text: string) => {
@@ -269,6 +307,7 @@ const ChatPage = () => {
         typingUsers={activeTypingUsers}
         isOtherUserOnline={isOtherUserOnline}
         activeConversationId={selectedChat?.conversationId || null}
+        isSingleChatView={Boolean(routeUsername)}
       />
     </div>
   );

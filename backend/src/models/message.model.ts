@@ -11,6 +11,8 @@ interface MessageDocument {
   receiverId?: Types.ObjectId;
   text: string;
   status: "sent" | "delivered";
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const messageSchema = new Schema<MessageDocument>(

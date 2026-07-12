@@ -31,8 +31,6 @@ const ContactPage = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    // Backend integration isn't required for this form per the assignment spec -
-    // it's frontend-validation only.
     setSubmitted(true);
     setName("");
     setEmail("");
@@ -58,7 +56,7 @@ const ContactPage = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wide">Email</p>
-              <p className="text-sm font-medium text-slate-800">support@vedconnect.io</p>
+              <p className="text-sm font-medium text-slate-800">prashantmalviya272002@gmail.com</p>
             </div>
           </div>
 
@@ -68,7 +66,7 @@ const ContactPage = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wide">Phone</p>
-              <p className="text-sm font-medium text-slate-800">+91 98765 43210</p>
+              <p className="text-sm font-medium text-slate-800">+91 7067516081</p>
             </div>
           </div>
 
@@ -78,7 +76,7 @@ const ContactPage = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400 uppercase tracking-wide">Location</p>
-              <p className="text-sm font-medium text-slate-800">Indore, Madhya Pradesh, India</p>
+              <p className="text-sm font-medium text-slate-800">Bhopal, Madhya Pradesh, India</p>
             </div>
           </div>
 
@@ -89,18 +87,18 @@ const ContactPage = () => {
           >
             <div className="text-center">
               <MapPin className="w-6 h-6 mx-auto mb-1 text-purple-500" />
-              Google Maps placeholder
+              Bhopal,MP
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <a href="https://github.com" target="_blank" rel="noreferrer" aria-label="GitHub" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
+            <a href="https://github.com/Prashant-Malviya" target="_blank" rel="noreferrer" aria-label="GitHub" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
               <Github className="w-4 h-4" />
             </a>
-            <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
+            <a href="https://www.linkedin.com/in/prashant-malviya-57270b1b6/" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
               <Linkedin className="w-4 h-4" />
             </a>
-            <a href="https://example.com" target="_blank" rel="noreferrer" aria-label="Portfolio" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
+            <a href="https://prashantmalviya-portfolio.netlify.app/" target="_blank" rel="noreferrer" aria-label="Portfolio" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
               <Globe className="w-4 h-4" />
             </a>
           </div>

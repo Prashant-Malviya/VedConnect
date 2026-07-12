@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Message } from "../types/message.types";
 import { Conversation, ConversationUser, DirectMessageEntry, SelectedChat } from "../types/conversation.types";
 import MessageList from "./MessageList";
@@ -21,6 +22,7 @@ interface ChatWindowProps {
   typingUsers: string[];
   isOtherUserOnline: boolean;
   activeConversationId: string | null;
+  isSingleChatView?: boolean;
 }
 
 const ChatWindow = ({
@@ -37,30 +39,64 @@ const ChatWindow = ({
   typingUsers,
   isOtherUserOnline,
   activeConversationId,
+  isSingleChatView = false,
 }: ChatWindowProps) => {
-  return (
-    <div className="flex w-full max-w-6xl">
-      <Sidebar
-        currentUsername={currentUsername}
-        communityConversation={communityConversation}
-        directMessages={directMessages}
-        selectedChat={selectedChat}
-        onSelectCommunity={onSelectCommunity}
-        onSelectUser={onSelectUser}
-      />
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 768 : false));
 
-      <div className="flex flex-col flex-1 h-[80vh] bg-white rounded-3xl shadow-card border border-purple-100/60 overflow-hidden">
-        <ChatHeader selectedChat={selectedChat} isConnected={isConnected} isOtherUserOnline={isOtherUserOnline} />
-        {selectedChat ? (
-          <>
-            <MessageList messages={messages} currentUserId={currentUserId} />
-            <TypingIndicator typingUsers={typingUsers} />
-            <MessageInput onSend={onSend} disabled={!isConnected} conversationId={activeConversationId} />
-          </>
-        ) : (
-          <EmptyState />
-        )}
-      </div>
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const shouldShowSidebar = !isMobile || !isSingleChatView;
+  const shouldShowChatPanel = !isMobile || isSingleChatView;
+
+  return (
+    <div className="flex flex-col md:flex-row w-full max-w-6xl gap-4 md:gap-0">
+      {shouldShowSidebar && (
+        <>
+          <div className="hidden md:flex">
+            <Sidebar
+              currentUsername={currentUsername}
+              communityConversation={communityConversation}
+              directMessages={directMessages}
+              selectedChat={selectedChat}
+              onSelectCommunity={onSelectCommunity}
+              onSelectUser={onSelectUser}
+            />
+          </div>
+          <div className="md:hidden">
+            <Sidebar
+              currentUsername={currentUsername}
+              communityConversation={communityConversation}
+              directMessages={directMessages}
+              selectedChat={selectedChat}
+              onSelectCommunity={onSelectCommunity}
+              onSelectUser={onSelectUser}
+              isMobile
+            />
+          </div>
+        </>
+      )}
+
+      {shouldShowChatPanel && (
+        <div className="flex flex-col flex-1 h-[80vh] bg-white rounded-3xl shadow-card border border-purple-100/60 overflow-hidden">
+          <ChatHeader selectedChat={selectedChat} isConnected={isConnected} isOtherUserOnline={isOtherUserOnline} />
+          {selectedChat ? (
+            <>
+              <MessageList messages={messages} currentUserId={currentUserId} />
+              <TypingIndicator typingUsers={typingUsers} />
+              <MessageInput onSend={onSend} disabled={!isConnected} conversationId={activeConversationId} />
+            </>
+          ) : (
+            <EmptyState />
+          )}
+        </div>
+      )}
     </div>
   );
 };

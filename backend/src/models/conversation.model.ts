@@ -15,6 +15,8 @@ export interface ConversationDocument {
   // name). Private chats derive their display name from the other
   // participant instead, so this stays empty for them.
   name: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const conversationSchema = new Schema<ConversationDocument>(

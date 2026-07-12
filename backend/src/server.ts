@@ -11,9 +11,7 @@ const PORT = process.env.PORT || 5000;
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/chat-app";
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
-// server.ts is the entry point: connect to the DB, build the Express app,
-// wrap it in a raw HTTP server (needed so socket.io can attach to the same
-// server), then start listening.
+
 const start = async () => {
   await connectDB(MONGODB_URI);
 

@@ -139,13 +139,13 @@ const HomePage = () => {
             production-ready applications with modern frontend experiences.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <a href="https://github.com" target="_blank" rel="noreferrer" aria-label="GitHub" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
+            <a href="https://github.com/Prashant-Malviya" target="_blank" rel="noreferrer" aria-label="GitHub" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
               <Github className="w-4 h-4" />
             </a>
-            <a href="https://linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
+            <a href="https://www.linkedin.com/in/prashant-malviya-57270b1b6" target="_blank" rel="noreferrer" aria-label="LinkedIn" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
               <Linkedin className="w-4 h-4" />
             </a>
-            <a href="https://example.com" target="_blank" rel="noreferrer" aria-label="Portfolio" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
+            <a href="https://prashantmalviya-portfolio.netlify.app" target="_blank" rel="noreferrer" aria-label="Portfolio" className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">
               <Globe className="w-4 h-4" />
             </a>
           </div>
