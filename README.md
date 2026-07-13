@@ -1,8 +1,17 @@
-# 💬 VedConnect - Real-Time Chat Application
 
-A production-ready real-time chat application built with the MERN Stack, TypeScript, and Socket.io. It supports secure authentication, one-to-one messaging, community chat, online presence, typing indicators, and message delivery status.
+# 💬 VedConnect – Real-Time Chat Application
 
-## 🌐 Live Demo
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](#)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](#)
+[![Node.js](https://img.shields.io/badge/Node.js-20-339933?logo=node.js&logoColor=white)](#)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](#)
+[![Socket.io](https://img.shields.io/badge/Socket.io-Real--Time-010101?logo=socketdotio)](#)
+
+A production-ready **real-time chat application** built using the **MERN Stack**, **TypeScript**, and **Socket.io**. The application supports secure JWT authentication, one-to-one messaging, a shared community chat, online presence, typing indicators, and real-time message delivery.
+
+---
+
+# 🌐 Live Demo
 
 | Service | URL |
 |---------|-----|
@@ -11,29 +20,51 @@ A production-ready real-time chat application built with the MERN Stack, TypeScr
 | ❤️ Health Check | https://vedconnect-if8e.onrender.com/health |
 
 
+<img width="1920" height="1200" alt="VedConnect" src="https://github.com/user-attachments/assets/2e4ecb3a-9f68-4db5-b332-ee555c1e2fe3" />
+
 ---
 
-## 🚀 Features
+# 📑 Table of Contents
+
+- Features
+- Tech Stack
+- Architecture
+- Project Structure
+- Backend Layers
+- Authentication Flow
+- Socket Events
+- REST API
+- Installation
+- Environment Variables
+- Deployment
+- Testing
+- Security
+- Future Improvements
+- Author
+
+---
+
+# ✨ Features
 
 - 🔐 JWT Authentication (Signup/Login)
-- 👤 Protected Routes
+- 🔒 Protected REST APIs
 - 💬 Community Chat
-- 📩 One-to-One Direct Messaging
-- ⚡ Real-time Messaging using Socket.io
-- 🟢 Online/Offline User Status
+- 👥 One-to-One Direct Messaging
+- ⚡ Real-time Messaging with Socket.io
+- 🟢 Online / Offline Presence
 - ⌨️ Typing Indicators
-- ✅ Message Delivery Status (Sent / Delivered)
-- 🔍 Search Users
-- 🎨 Responsive UI built with Tailwind CSS
-- 🏗️ Layered Backend Architecture
-- 🔒 Password Hashing using bcrypt
+- ✅ Message Delivery Status
+- 🔍 User Search
+- 📱 Responsive UI
+- 🧱 Layered Backend Architecture
+- 🔑 Password Hashing using bcrypt
+- 🌍 Deployed on Vercel + Render
 
 ---
 
-## 🛠️ Tech Stack
+# 🛠 Tech Stack
 
-### Frontend
-
+## Frontend
 - React
 - TypeScript
 - Vite
@@ -41,27 +72,62 @@ A production-ready real-time chat application built with the MERN Stack, TypeScr
 - React Router
 - Axios
 - Socket.io Client
-- Lucide React Icons
+- Lucide React
 
-### Backend
-
+## Backend
 - Node.js
 - Express.js
 - TypeScript
-- MongoDB
+- MongoDB Atlas
 - Mongoose
 - Socket.io
-- JWT Authentication
+- JWT
 - bcrypt
 
 ---
 
-# 📁 Project Structure
+# 🏗 Architecture
+
+```
+React Client (Vercel)
+          │
+          ▼
+REST API (Express)
+          │
+          ▼
+Controller
+          │
+          ▼
+Service
+          │
+          ▼
+Repository
+          │
+          ▼
+MongoDB Atlas
+
+          ▲
+          │
+Socket.io Server
+          │
+          ▼
+Connected Clients
+```
+
+REST APIs are responsible for authentication, conversations and message persistence while Socket.io powers real-time communication.
+
+---
+
+# 📂 Project Structure
 
 ```
 VedConnect/
+├── client/
+│   ├── src/
+│   ├── public/
+│   └── package.json
 │
-├── backend/
+├── server/
 │   ├── src/
 │   │   ├── config/
 │   │   ├── controllers/
@@ -71,154 +137,25 @@ VedConnect/
 │   │   ├── routes/
 │   │   ├── services/
 │   │   ├── sockets/
-│   │   ├── types/
 │   │   ├── utils/
-│   │   └── index.ts
-│   │
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── hooks/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── sockets/
-│   │   ├── types/
-│   │   └── App.tsx
-│   │
-│   ├── package.json
-│   └── vite.config.ts
+│   │   ├── app.ts
+│   │   └── server.ts
+│   └── package.json
 │
 └── README.md
 ```
 
 ---
 
-# 🏗️ Application Flow
+# 🧱 Backend Layers
 
-```
-Home
-   │
-   ▼
-Signup
-   │
-   ▼
-Login
-   │
-   ▼
-Chat Dashboard
-   │
-   ├── Community Chat
-   └── Direct Messages
-```
-
----
-
-# ⚙️ Architecture
-
-REST APIs handle all database operations.
-
-Socket.io is responsible only for real-time communication.
-
-```
-Frontend
-     │
-     ▼
-Express API
-     │
-     ▼
-Controllers
-     │
-     ▼
-Services
-     │
-     ▼
-Repositories
-     │
-     ▼
-MongoDB
-
-     │
-     ▼
-Socket.io
-     │
-     ▼
-Connected Clients
-```
-
----
-
-# 📦 Backend Layers
-
-### Routes
-
-Defines API endpoints.
-
-```
-routes/
-```
-
----
-
-### Controllers
-
-Handles request and response.
-
-```
-controllers/
-```
-
----
-
-### Services
-
-Contains business logic.
-
-```
-services/
-```
-
----
-
-### Repositories
-
-Responsible for database interaction.
-
-```
-repositories/
-```
-
----
-
-### Models
-
-MongoDB schemas.
-
-```
-models/
-```
-
----
-
-### Middleware
-
-- JWT Authentication
-- Error Handling
-
----
-
-### Socket
-
-Handles
-
-- User Connection
-- User Disconnection
-- Online Users
-- Typing Events
-- Real-time Messages
+- **Routes** – Define API endpoints
+- **Controllers** – Handle HTTP requests & responses
+- **Services** – Business logic
+- **Repositories** – Database access
+- **Models** – MongoDB schemas
+- **Middleware** – JWT authentication & error handling
+- **Sockets** – Real-time communication
 
 ---
 
@@ -227,23 +164,17 @@ Handles
 ```
 Signup
    │
-   ▼
-Password Hashing (bcrypt)
+bcrypt Hash
    │
-   ▼
 MongoDB
    │
-   ▼
 Login
    │
-   ▼
-JWT Token Generated
+JWT Token
    │
-   ▼
-Stored in LocalStorage
+Protected APIs
    │
-   ▼
-Protected APIs & Socket Connection
+Socket Authentication
 ```
 
 ---
@@ -252,24 +183,19 @@ Protected APIs & Socket Connection
 
 ## Client → Server
 
-| Event | Description |
-|--------|-------------|
-| typing | User started typing |
-| stopTyping | User stopped typing |
-| joinConversation | Join conversation room |
-
----
+- joinConversation
+- leaveConversation
+- typing
+- stopTyping
 
 ## Server → Client
 
-| Event | Description |
-|--------|-------------|
-| newMessage | Receive new message |
-| onlineUsers | Online users list |
-| userTyping | Typing indicator |
-| userStopTyping | Stop typing indicator |
-| messageStatusUpdate | Sent/Delivered status |
-| notification | Join/Leave notifications |
+- newMessage
+- onlineUsers
+- userTyping
+- userStopTyping
+- messageStatusUpdate
+- notification
 
 ---
 
@@ -279,172 +205,133 @@ Protected APIs & Socket Connection
 
 | Method | Endpoint |
 |--------|----------|
-| POST | `/api/auth/signup` |
-| POST | `/api/auth/login` |
-| GET | `/api/auth/me` |
-
----
+| POST | /api/auth/signup |
+| POST | /api/auth/login |
+| GET | /api/auth/me |
 
 ## Users
 
 | Method | Endpoint |
 |--------|----------|
-| GET | `/api/users` |
-
----
+| GET | /api/users |
 
 ## Conversations
 
 | Method | Endpoint |
 |--------|----------|
-| GET | `/api/conversations` |
-
----
+| GET | /api/conversations |
+| GET | /api/conversations/:id/messages |
 
 ## Messages
 
 | Method | Endpoint |
 |--------|----------|
-| GET | `/api/messages/:conversationId` |
-| POST | `/api/messages` |
-
----
-
-# 📋 API Response
-
-```json
-{
-  "success": true,
-  "message": "Message sent successfully",
-  "data": {}
-}
-```
+| POST | /api/messages |
 
 ---
 
 # ⚙️ Installation
 
-## 1. Clone Repository
+## Clone
 
 ```bash
-git clone https://github.com/yourusername/VedConnect.git
-
+git clone https://github.com/Prashant-Malviya/VedConnect.git
 cd VedConnect
 ```
 
----
-
-## 2. Backend Setup
+## Backend
 
 ```bash
-cd backend
-
+cd server
 npm install
+npm run dev
 ```
 
-Create a `.env`
+## Frontend
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+---
+
+# 🌱 Environment Variables
+
+## server/.env
 
 ```env
 PORT=5000
-
-MONGODB_URI=your_mongodb_connection_string
-
-JWT_SECRET=your_secret_key
-
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_secret
 CLIENT_URL=http://localhost:5173
 ```
 
-Run backend
-
-```bash
-npm run dev
-```
-
-Backend runs on
-
-```
-http://localhost:5000
-```
-
----
-
-## 3. Frontend Setup
-
-```bash
-cd frontend
-
-npm install
-```
-
-Create a `.env`
+## client/.env
 
 ```env
 VITE_API_URL=http://localhost:5000/api
-
 VITE_SOCKET_URL=http://localhost:5000
-```
-
-Run frontend
-
-```bash
-npm run dev
-```
-
-Frontend runs on
-
-```
-http://localhost:5173
 ```
 
 ---
 
-# 🧪 How to Test
+# 🚀 Deployment
 
-1. Register User A.
-2. Register User B in another browser/incognito.
-3. Login with both users.
-4. Open Community Chat.
-5. Send messages.
-6. Open Direct Messages.
-7. Verify:
+| Service | Platform |
+|----------|----------|
+| Frontend | Vercel |
+| Backend | Render |
+| Database | MongoDB Atlas |
 
-- Real-time messaging
-- Online status
-- Typing indicator
-- Delivery status
-- New conversation creation
+---
+
+# 🧪 Testing
+
+1. Register two users.
+2. Login in separate browsers.
+3. Test Community Chat.
+4. Test Direct Messages.
+5. Verify typing indicators.
+6. Verify online status.
+7. Verify real-time message delivery.
 
 ---
 
 # 🔒 Security
 
-- Password hashing using bcrypt
 - JWT Authentication
-- Protected API routes
-- Protected Socket connection
-- Route Guards
+- bcrypt Password Hashing
+- Protected Routes
+- Centralized Error Handling
 - Input Validation
+- CORS Configuration
 
 ---
 
-# 📈 Future Improvements
+# 🚀 Future Improvements
 
 - Read Receipts
-- Image Sharing
-- File Uploads
-- Emoji Picker
+- Image & File Sharing
 - Voice Messages
 - Video Calling
 - Group Management
 - Push Notifications
-- Redis for Socket Scaling
+- Redis for Horizontal Scaling
 - Refresh Token Authentication
 
 ---
 
-# 📄 License
+# 📸 Screenshots
 
-This project is developed for learning purposes and technical assessment.
+> Add screenshots here.
+
+- Home Page
+- Login
+- Community Chat
+- Direct Messages
+- Mobile View
 
 ---
 
@@ -454,4 +341,8 @@ This project is developed for learning purposes and technical assessment.
 
 - GitHub: https://github.com/Prashant-Malviya
 - LinkedIn: https://www.linkedin.com/in/prashant-malviya-57270b1b6/
-- Portfolio: https://prashantmalviya-portfolio.netlify.app
+- Portfolio: https://prashantmalviya-portfolio.netlify.app/
+
+---
+
+## ⭐ If you found this project helpful, please consider giving it a star!
