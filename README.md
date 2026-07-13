@@ -19,8 +19,7 @@ A production-ready **real-time chat application** built using the **MERN Stack**
 | 🔗 Backend API | https://vedconnect-if8e.onrender.com |
 | ❤️ Health Check | https://vedconnect-if8e.onrender.com/health |
 
-
-<img width="1920" height="1200" alt="VedConnect" src="https://github.com/user-attachments/assets/2e4ecb3a-9f68-4db5-b332-ee555c1e2fe3" />
+<img width="1919" height="1124" alt="VedConnect" src="https://github.com/user-attachments/assets/36abd679-c040-40b9-a7dc-38a46fccd881" />
 
 ---
 
