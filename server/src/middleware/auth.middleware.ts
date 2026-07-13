@@ -3,9 +3,7 @@ import jwt from "jsonwebtoken";
 import { sendError } from "../utils/response.util";
 import { JwtPayload } from "../types/auth.types";
 
-// Protects any route it's attached to - verifies the JWT sent in the
-// Authorization header and attaches the decoded user to req.user.
-// Any route using this middleware can safely assume req.user exists.
+// Verifies the JWT and attaches the decoded user to req.user.
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 

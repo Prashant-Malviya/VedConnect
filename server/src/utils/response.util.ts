@@ -1,10 +1,6 @@
 import { Response } from "express";
 
-// Keeps every API response in the same shape:
-// { success, message, data } for success
-// { success, message } for errors
-// This means the frontend never has to guess the response shape per-route.
-
+// Keeps every API response in the same { success, message, data } shape.
 interface SuccessResponse<T> {
   success: true;
   message: string;

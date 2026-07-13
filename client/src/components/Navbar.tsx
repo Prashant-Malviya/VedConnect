@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
+  { to: "/api-docs", label: "API Docs" },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>

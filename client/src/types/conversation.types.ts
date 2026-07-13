@@ -19,18 +19,14 @@ export interface Conversation {
   updatedAt: string;
 }
 
-// One row in the "Direct Messages" list: a registered user, paired with
-// their existing conversation if one exists yet (null means "never
-// messaged - clicking them starts a brand-new chat").
+// A registered user paired with their conversation, if one exists yet.
 export interface DirectMessageEntry {
   user: ConversationUser;
   conversation: Conversation | null;
   isOnline: boolean;
 }
 
-// What's currently open in the chat window. A private chat can be selected
-// before any conversation exists in the DB yet (conversationId is null
-// until the first message is sent).
+// conversationId is null for a private chat until the first message is sent.
 export type SelectedChat =
   | { kind: "community"; conversationId: string }
   | { kind: "private"; user: ConversationUser; conversationId: string | null };

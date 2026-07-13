@@ -1,12 +1,11 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import axios from "axios";
 import { User, AuthContextType } from "../types/auth.types";
 import { signupRequest, loginRequest, fetchCurrentUser } from "../services/auth.api";
 import { setAuthToken } from "../services/api";
 
-// This is the one place we reach for Context in this app - auth state is
-// needed by the Navbar, ProtectedRoute, and the chat page all at once, so
-// prop-drilling it down would be worse than a small, focused context.
-
+// Auth state is needed by the Navbar, ProtectedRoute, and ChatPage at once,
+// so a small Context is the cleanest option here.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const TOKEN_KEY = "chat-token";
 
@@ -16,8 +15,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // On app load, if a token was saved from a previous session, verify it's
-    // still valid by calling /auth/me before trusting it.
+    // Verify a saved token is still valid before trusting it.
     const restoreSession = async () => {
       const savedToken = localStorage.getItem(TOKEN_KEY);
       if (!savedToken) {
@@ -41,6 +39,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     restoreSession();
   }, []);
 
+  // If a token we've already stored gets rejected (expired, or the server
+  // restarted with a different JWT_SECRET), every future request would
+  // otherwise keep failing silently. Catching 401s here logs the user out
+  // once, cleanly, and ProtectedRoute sends them back to /login.
+  useEffect(() => {
+    const interceptorId = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const isUnauthorized = axios.isAxiosError(error) && error.response?.status === 401;
+        const hasStoredToken = Boolean(localStorage.getItem(TOKEN_KEY));
+
+        if (isUnauthorized && hasStoredToken) {
+          localStorage.removeItem(TOKEN_KEY);
+          setAuthToken(null);
+          setToken(null);
+          setUser(null);
+        }
+
+        return Promise.reject(error);
+      }
+    );
+
+    return () => axios.interceptors.response.eject(interceptorId);
+  }, []);
+
   const login = async (email: string, password: string) => {
     const { token: newToken, user: loggedInUser } = await loginRequest(email, password);
     localStorage.setItem(TOKEN_KEY, newToken);
@@ -50,9 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    await signupRequest(name, email, password);
-    // Per the spec, signup does NOT log the user in - they're redirected to
-    // the Login page afterwards.
+    await signupRequest(name, email, password); // signup doesn't log in - redirect to Login
   };
 
   const logout = () => {

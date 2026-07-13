@@ -2,9 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { sendError } from "../utils/response.util";
 import { AppError } from "../utils/app-error";
 
-// Centralized error handler - the last piece of middleware in app.ts.
-// Services throw AppError for expected/client-facing problems (bad input,
-// wrong password, etc). Anything else is treated as an unexpected 500.
+// Services throw AppError for expected problems; anything else is a 500.
 export const errorHandler = (
   err: Error,
   req: Request,

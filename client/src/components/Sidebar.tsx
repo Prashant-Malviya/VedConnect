@@ -18,7 +18,6 @@ interface SidebarProps {
 const formatPreviewTime = (isoDate: string): string =>
   new Date(isoDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-
 const Sidebar = ({
   currentUsername,
   communityConversation,
@@ -46,7 +45,7 @@ const Sidebar = ({
   return (
     <div
       className={`flex-col bg-white/80 backdrop-blur rounded-3xl shadow-soft border border-purple-100/60 p-5 ${
-        isMobile ? "flex w-full mb-4 md:hidden" : "hidden md:flex w-72 shrink-0 mr-5"
+        isMobile ? "flex w-full mb-4 md:hidden" : "hidden md:flex w-72 shrink-0 mr-5 h-[80vh]"
       }`}
     >
       <div className="rounded-2xl bg-soft-gradient p-4">
@@ -75,7 +74,7 @@ const Sidebar = ({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto mt-4 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto mt-4 space-y-4">
         <div>
           <p className="text-[11px] font-semibold text-purple-400 uppercase tracking-wider mb-2">Pinned</p>
           <button

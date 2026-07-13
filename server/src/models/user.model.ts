@@ -1,9 +1,6 @@
 import { Schema, model } from "mongoose";
 
-// A user's password is always stored hashed - never in plain text.
-// Hashing happens in auth.service.ts, not here, so the model stays
-// focused only on shape/validation.
-
+// Passwords are always hashed before reaching this model (see auth.service.ts).
 interface UserDocument {
   name: string;
   email: string;

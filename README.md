@@ -1,448 +1,263 @@
-# 💬 VedConnect - Real-Time Chat Application
+# VedConnect - Real-Time Chat Application
 
-A production-ready **real-time chat application** built with the **MERN Stack**, **TypeScript**, and **Socket.io**. It supports secure authentication, one-to-one messaging, community chat, online presence, typing indicators, and message delivery status.
-
----
-
-## 🚀 Features
-
-- 🔐 JWT Authentication (Signup/Login)
-- 👤 Protected Routes
-- 💬 Community Chat
-- 📩 One-to-One Direct Messaging
-- ⚡ Real-time Messaging using Socket.io
-- 🟢 Online/Offline User Status
-- ⌨️ Typing Indicators
-- ✅ Message Delivery Status (Sent / Delivered)
-- 🔍 Search Users
-- 🎨 Responsive UI built with Tailwind CSS
-- 🏗️ Layered Backend Architecture
-- 🔒 Password Hashing using bcrypt
+A full-stack, real-time chat application built on the MERN stack with TypeScript throughout. It supports JWT authentication, a shared Community chat, one-to-one direct messages, online presence, typing indicators, and message delivery status.
 
 ---
 
-## 🛠️ Tech Stack
+## Table of Contents
 
-### Frontend
-
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- React Router
-- Axios
-- Socket.io Client
-- Lucide React Icons
-
-### Backend
-
-- Node.js
-- Express.js
-- TypeScript
-- MongoDB
-- Mongoose
-- Socket.io
-- JWT Authentication
-- bcrypt
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Architecture](#architecture)
+- [Recent Fixes](#recent-fixes)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [REST API Reference](#rest-api-reference)
+- [API Documentation (Swagger)](#api-documentation-swagger)
+- [Socket.io Events](#socketio-events)
+- [How to Test It End to End](#how-to-test-it-end-to-end)
+- [Known Limitations / Trade-offs](#known-limitations--trade-offs)
 
 ---
 
-# 📁 Project Structure
+## Features
+
+- JWT-based signup/login, with passwords hashed via bcrypt
+- Protected REST routes and a protected Socket.io connection
+- A shared **Community** chat that every registered user automatically belongs to
+- One-to-one **Direct Messages**, created lazily on the first message sent
+- Real-time delivery via Socket.io (rooms per conversation, so private chats stay private)
+- Online / offline presence, shown per user in the sidebar
+- Typing indicators, scoped to the conversation you're currently viewing
+- Join / leave notifications
+- Message delivery status (Sent / Delivered - no read receipts)
+- Auto-scroll to the latest message, message grouping, and date separators
+- Fully responsive UI (desktop, tablet, mobile)
+
+## Tech Stack
+
+**Client:** React, TypeScript, Vite, Tailwind CSS, React Router, Axios, Socket.io Client, React Toastify, Lucide Icons
+
+**Server:** Node.js, Express, TypeScript, MongoDB, Mongoose, Socket.io, JWT, bcrypt
+
+## Project Structure
 
 ```
 VedConnect/
-│
-├── backend/
+├── server/
 │   ├── src/
-│   │   ├── config/
-│   │   ├── controllers/
-│   │   ├── middleware/
-│   │   ├── models/
-│   │   ├── repositories/
-│   │   ├── routes/
-│   │   ├── services/
-│   │   ├── sockets/
-│   │   ├── types/
-│   │   ├── utils/
-│   │   └── index.ts
-│   │
+│   │   ├── config/         # DB connection
+│   │   ├── controllers/    # Request/response handling only
+│   │   ├── services/       # Business logic
+│   │   ├── repositories/   # The only layer that talks to MongoDB
+│   │   ├── routes/         # Express route definitions
+│   │   ├── models/         # Mongoose schemas (User, Conversation, Message)
+│   │   ├── sockets/        # Connection, presence, rooms, typing - no business logic
+│   │   ├── middleware/     # JWT auth + centralized error handling
+│   │   ├── types/          # Shared TypeScript interfaces
+│   │   ├── utils/          # AppError, response formatting
+│   │   ├── app.ts          # Express app wiring
+│   │   └── server.ts       # Entry point
 │   ├── package.json
 │   └── tsconfig.json
 │
-├── frontend/
+├── client/
 │   ├── src/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── hooks/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── sockets/
-│   │   ├── types/
+│   │   ├── components/     # Sidebar, ChatWindow, MessageList, etc.
+│   │   ├── context/        # AuthContext (the app's one use of Context)
+│   │   ├── pages/          # Home, About, Contact, Signup, Login, Chat
+│   │   ├── services/       # Axios calls (api.ts, auth.api.ts)
+│   │   ├── sockets/        # Shared socket.io-client instance
+│   │   ├── types/          # Shared TypeScript interfaces
+│   │   ├── utils/          # Avatar color hashing
 │   │   └── App.tsx
-│   │
 │   ├── package.json
 │   └── vite.config.ts
 │
 └── README.md
 ```
 
----
+## Architecture
 
-# 🏗️ Application Flow
-
-```
-Home
-   │
-   ▼
-Signup
-   │
-   ▼
-Login
-   │
-   ▼
-Chat Dashboard
-   │
-   ├── Community Chat
-   └── Direct Messages
-```
-
----
-
-# ⚙️ Architecture
-
-REST APIs handle all database operations.
-
-Socket.io is responsible only for real-time communication.
+REST APIs are the source of truth for data (auth, users, conversations, message history, sending a message). Socket.io is used only for real-time delivery on top of that: broadcasting new messages, presence, and typing.
 
 ```
-Frontend
-     │
-     ▼
-Express API
-     │
-     ▼
-Controllers
-     │
-     ▼
-Services
-     │
-     ▼
-Repositories
-     │
-     ▼
-MongoDB
-
-     │
-     ▼
-Socket.io
-     │
-     ▼
-Connected Clients
+Client
+  |
+  v
+POST /api/messages   (JWT required)
+  |
+  v
+Controller -> Service -> Repository -> MongoDB
+  |
+  v
+Broadcast to the conversation's Socket.io room -> every participant's open tabs
 ```
 
----
+**Conversations are the core model.** Every message belongs to a Conversation, which is either:
 
-# 📦 Backend Layers
+- `type: "group"` - the single shared **Community** conversation, or
+- `type: "private"` - a 1-to-1 chat between exactly two participants
 
-### Routes
+Every conversation is also a Socket.io *room*, named after its `_id`. Broadcasting a message to `io.to(conversationId)` (instead of `io.emit()` to everyone) is what keeps private chats private and scopes Community to its own room.
 
-Defines API endpoints.
+### Backend layers
 
-```
-routes/
-```
-
----
-
-### Controllers
-
-Handles request and response.
-
-```
-controllers/
-```
+- **routes/** - Express endpoint definitions
+- **controllers/** - request/response handling only
+- **services/** - business logic, validation, and the Community self-healing logic (see below)
+- **repositories/** - the only layer that queries MongoDB directly
+- **sockets/** - connection, disconnection, presence tracking, room membership, typing relay - no business logic
+- **middleware/** - `authenticate` (JWT verification) and a centralized error handler built around a small `AppError` class
 
 ---
 
-### Services
 
-Contains business logic.
 
-```
-services/
-```
+## Getting Started
 
----
+### Prerequisites
 
-### Repositories
+- Node.js 18+
+- A running MongoDB instance (local, or a free MongoDB Atlas cluster)
 
-Responsible for database interaction.
+### 1. Backend
 
-```
-repositories/
+```bash
+cd server
+cp .env.example .env
+# Set a real JWT_SECRET and your MongoDB URI in .env
+npm install
+npm run dev
 ```
 
----
+Runs on `http://localhost:5000` by default.
 
-### Models
+### 2. Frontend
 
-MongoDB schemas.
+In a separate terminal:
 
-```
-models/
-```
-
----
-
-### Middleware
-
-- JWT Authentication
-- Error Handling
-
----
-
-### Socket
-
-Handles
-
-- User Connection
-- User Disconnection
-- Online Users
-- Typing Events
-- Real-time Messages
-
----
-
-# 🔐 Authentication Flow
-
-```
-Signup
-   │
-   ▼
-Password Hashing (bcrypt)
-   │
-   ▼
-MongoDB
-   │
-   ▼
-Login
-   │
-   ▼
-JWT Token Generated
-   │
-   ▼
-Stored in LocalStorage
-   │
-   ▼
-Protected APIs & Socket Connection
+```bash
+cd client
+cp .env.example .env
+npm install
+npm run dev
 ```
 
----
-
-# ⚡ Socket Events
-
-## Client → Server
-
-| Event | Description |
-|--------|-------------|
-| typing | User started typing |
-| stopTyping | User stopped typing |
-| joinConversation | Join conversation room |
+Runs on `http://localhost:5173` by default.
 
 ---
 
-## Server → Client
+## Environment Variables
 
-| Event | Description |
-|--------|-------------|
-| newMessage | Receive new message |
-| onlineUsers | Online users list |
-| userTyping | Typing indicator |
-| userStopTyping | Stop typing indicator |
-| messageStatusUpdate | Sent/Delivered status |
-| notification | Join/Leave notifications |
+### `server/.env`
 
----
+| Variable         | Description                                  | Example                                |
+|------------------|-----------------------------------------------|-----------------------------------------|
+| `PORT`           | Port the API server listens on               | `5000`                                  |
+| `MONGODB_URI`    | MongoDB connection string                     | `mongodb://localhost:27017/chat-app`   |
+| `CLIENT_URL`     | Frontend origin, used for CORS                | `http://localhost:5173`                |
+| `JWT_SECRET`     | Secret used to sign/verify JWTs               | a long random string                    |
+| `JWT_EXPIRES_IN` | How long a JWT stays valid                    | `7d`                                     |
 
-# 📚 REST API
+### `client/.env`
 
-## Authentication
-
-| Method | Endpoint |
-|--------|----------|
-| POST | `/api/auth/signup` |
-| POST | `/api/auth/login` |
-| GET | `/api/auth/me` |
+| Variable            | Description                    | Example                          |
+|---------------------|---------------------------------|-----------------------------------|
+| `VITE_API_URL`      | Base URL for REST API calls    | `http://localhost:5000/api`      |
+| `VITE_SOCKET_URL`   | Base URL for the Socket.io connection | `http://localhost:5000`   |
 
 ---
 
-## Users
+## REST API Reference
 
-| Method | Endpoint |
-|--------|----------|
-| GET | `/api/users` |
-
----
-
-## Conversations
-
-| Method | Endpoint |
-|--------|----------|
-| GET | `/api/conversations` |
-
----
-
-## Messages
-
-| Method | Endpoint |
-|--------|----------|
-| GET | `/api/messages/:conversationId` |
-| POST | `/api/messages` |
-
----
-
-# 📋 API Response
+All responses share the same shape:
 
 ```json
 {
   "success": true,
-  "message": "Message sent successfully",
+  "message": "Human-readable message",
   "data": {}
 }
 ```
 
----
+### Auth
 
-# ⚙️ Installation
+| Method | Endpoint           | Auth required | Description                          |
+|--------|--------------------|:--------------:|----------------------------------------|
+| POST   | `/api/auth/signup` | No             | Create an account (adds user to Community) |
+| POST   | `/api/auth/login`  | No             | Log in, returns a JWT                  |
+| GET    | `/api/auth/me`     | Yes            | Get the current logged-in user         |
 
-## 1. Clone Repository
+### Users
 
-```bash
-git clone https://github.com/yourusername/VedConnect.git
+| Method | Endpoint      | Auth required | Description                             |
+|--------|---------------|:--------------:|-------------------------------------------|
+| GET    | `/api/users`  | Yes            | Every registered user except yourself   |
 
-cd VedConnect
-```
+### Conversations
 
----
+| Method | Endpoint                              | Auth required | Description                                      |
+|--------|----------------------------------------|:--------------:|-----------------------------------------------------|
+| GET    | `/api/conversations`                  | Yes            | Every conversation you belong to (Community + DMs) |
+| GET    | `/api/conversations/:id/messages`     | Yes            | Full message history for one conversation          |
 
-## 2. Backend Setup
+### Messages
 
-```bash
-cd backend
+| Method | Endpoint         | Auth required | Description                                                |
+|--------|------------------|:--------------:|----------------------------------------------------------------|
+| POST   | `/api/messages` | Yes            | Send a message. Body needs either `conversationId` **or** `receiverId` (first message to someone new) |
 
-npm install
-```
-
-Create a `.env`
-
-```env
-PORT=5000
-
-MONGODB_URI=your_mongodb_connection_string
-
-JWT_SECRET=your_secret_key
-
-CLIENT_URL=http://localhost:5173
-```
-
-Run backend
-
-```bash
-npm run dev
-```
-
-Backend runs on
-
-```
-http://localhost:5000
-```
+Auth is passed as `Authorization: Bearer <token>`.
 
 ---
 
-## 3. Frontend Setup
+## API Documentation (Swagger)
 
-```bash
-cd frontend
+Every route above is also described by a single OpenAPI 3.0 spec at `server/src/docs/openapi.json`, served two ways:
 
-npm install
-```
+- **`GET /api/docs`** - a live Swagger UI. Click **Authorize**, paste a JWT from `POST /api/auth/login`, and every route can be called directly from the browser with "Try it out".
+- **`GET /api/docs.json`** - the raw spec. In Postman: **Import → Link**, paste `http://localhost:5000/api/docs.json`, and every endpoint above is imported as a ready-to-use request with example bodies.
 
-Create a `.env`
-
-```env
-VITE_API_URL=http://localhost:5000/api
-
-VITE_SOCKET_URL=http://localhost:5000
-```
-
-Run frontend
-
-```bash
-npm run dev
-```
-
-Frontend runs on
-
-```
-http://localhost:5173
-```
+The frontend also has its own page at **`/api-docs`** (linked from the navbar) that embeds the same Swagger UI plus a quick-reference table, so it's reachable without knowing the backend's port.
 
 ---
 
-# 🧪 How to Test
+## Socket.io Events
 
-1. Register User A.
-2. Register User B in another browser/incognito.
-3. Login with both users.
-4. Open Community Chat.
-5. Send messages.
-6. Open Direct Messages.
-7. Verify:
+Connecting requires a JWT: `io(SOCKET_URL, { auth: { token } })`.
 
-- Real-time messaging
-- Online status
-- Typing indicator
-- Delivery status
-- New conversation creation
+### Client -> Server
 
----
+| Event               | Payload                       | Description                          |
+|----------------------|--------------------------------|----------------------------------------|
+| `joinConversation`   | `conversationId: string`      | Explicitly join a conversation's room |
+| `leaveConversation`  | `conversationId: string`      | Leave a conversation's room           |
+| `typing`             | `{ conversationId }`          | Notify others you're typing            |
+| `stopTyping`         | `{ conversationId }`          | Notify others you've stopped           |
 
-# 🔒 Security
+### Server -> Client
 
-- Password hashing using bcrypt
-- JWT Authentication
-- Protected API routes
-- Protected Socket connection
-- Route Guards
-- Input Validation
+| Event                  | Payload                                              | Description                              |
+|-------------------------|-------------------------------------------------------|---------------------------------------------|
+| `newMessage`           | `Message`                                             | A new message in a room you're in          |
+| `messageStatusUpdate`  | `{ messageId, status, conversationId }`              | A message flipped from `sent` to `delivered` |
+| `onlineUsers`          | `OnlineUser[]`                                        | The current list of online users            |
+| `userTyping`           | `{ username, conversationId }`                       | Someone started typing in a room you're in |
+| `userStopTyping`       | `{ username, conversationId }`                       | Someone stopped typing                      |
+| `notification`         | `{ message }`                                         | Join/leave text, e.g. "X joined the chat"  |
 
 ---
 
-# 📈 Future Improvements
+## How to Test It End to End
 
-- Read Receipts
-- Image Sharing
-- File Uploads
-- Emoji Picker
-- Voice Messages
-- Video Calling
-- Group Management
-- Push Notifications
-- Redis for Socket Scaling
-- Refresh Token Authentication
+1. Start the backend and frontend (see [Getting Started](#getting-started)).
+2. Sign up as **User A** in one browser, and **User B** in a second browser (or an incognito window).
+3. Log in as both.
+4. Open **Community** in each - send a message from one, watch it appear instantly in the other.
+5. Open a **Direct Message** with the other user (no conversation exists yet) - send the first message, and confirm it now shows up under Direct Messages with a last-message preview in the sidebar.
+6. Confirm: online status in the sidebar updates live, typing shows "X is typing...", join/leave notifications appear, and your own messages show "Sent" then flip to "Delivered" once the other user is online.
+7. To specifically verify the DB-wipe fix: clear every collection in MongoDB while the server keeps running (no restart), then log in again (or refresh) and click Community or any user. It should work immediately - Community is recreated and you're re-added to it automatically on the next conversation fetch.
 
----
 
-# 📄 License
-
-This project is developed for learning purposes and technical assessment.
-
----
-
-# 👨‍💻 Author
-
-**Prashant Malviya**
-
-- GitHub: https://github.com/Prashant-Malviya
-- LinkedIn: https://www.linkedin.com/in/prashant-malviya-57270b1b6/
-- Portfolio: https://prashantmalviya-portfolio.netlify.app

@@ -1,9 +1,5 @@
 import { Schema, model, Types } from "mongoose";
 
-// Every message belongs to a Conversation (Community or private). For
-// private messages, receiverId is set so the DB can answer "who was this
-// meant for" without re-deriving it from the Conversation every time.
-
 interface MessageDocument {
   conversationId: Types.ObjectId;
   senderId: Types.ObjectId;
@@ -27,8 +23,6 @@ const messageSchema = new Schema<MessageDocument>(
   { timestamps: true }
 );
 
-// Every message list fetch is scoped to one conversation and ordered by
-// time - this index makes both parts of that query fast.
-messageSchema.index({ conversationId: 1, createdAt: 1 });
+messageSchema.index({ conversationId: 1, createdAt: 1 }); // speeds up per-conversation history fetches
 
 export const MessageModel = model<MessageDocument>("Message", messageSchema);
