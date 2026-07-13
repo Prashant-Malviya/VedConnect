@@ -3,9 +3,6 @@ import { Message } from "../types/message.types";
 import { Conversation } from "../types/conversation.types";
 import { UserListItem } from "../types/user.types";
 
-// Single place for all axios calls related to chat data. Components never
-// call axios directly - they call these functions instead.
-
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 interface ApiResponse<T> {
@@ -14,8 +11,8 @@ interface ApiResponse<T> {
   data: T;
 }
 
-// Called once by AuthContext whenever the token changes (login/logout/app
-// load), so every subsequent axios call automatically carries the JWT.
+// Called by AuthContext whenever the token changes, so every subsequent
+// axios call automatically carries the JWT.
 export const setAuthToken = (token: string | null) => {
   if (token) {
     axios.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -47,10 +44,8 @@ interface SendMessageParams {
   receiverId?: string;
 }
 
-// senderId/senderName are never sent from the client - the backend reads
-// the sender's identity from the JWT instead, which is safer. Callers
-// supply EITHER conversationId (an existing chat) or receiverId (the
-// first message to someone new).
+// Callers supply EITHER conversationId (existing chat) or receiverId
+// (first message to someone new) - sender identity comes from the JWT.
 export const sendMessage = async (params: SendMessageParams): Promise<Message> => {
   const response = await axios.post<ApiResponse<Message>>(`${API_URL}/messages`, params);
   return response.data.data;

@@ -3,14 +3,17 @@ import * as userRepository from "../repositories/user.repository";
 import * as messageRepository from "../repositories/message.repository";
 import { AppError } from "../utils/app-error";
 
-// Ensures the single shared Community conversation exists, and that every
-// currently registered user is a participant of it. Called once at server
-// startup so Community is always ready before any request comes in.
+// Self-healing: if Community was ever wiped mid-session, this recreates it
+// on the spot instead of requiring a server restart.
+const ensureCommunityExists = async () => {
+  const existing = await conversationRepository.findCommunityConversation();
+  if (existing) return existing;
+  return conversationRepository.createCommunityConversation();
+};
+
+// Called once at server startup so Community is ready before any request.
 export const ensureCommunityConversation = async () => {
-  let community = await conversationRepository.findCommunityConversation();
-  if (!community) {
-    community = await conversationRepository.createCommunityConversation();
-  }
+  const community = await ensureCommunityExists();
 
   const allUserIds = await userRepository.findAllUserIds();
   for (const userId of allUserIds) {
@@ -20,11 +23,9 @@ export const ensureCommunityConversation = async () => {
   return community;
 };
 
-// Called right after a new user signs up, so they land in Community chat
-// immediately without needing a server restart.
+// Called after signup, and lazily whenever conversations are listed.
 export const addUserToCommunity = async (userId: string) => {
-  const community = await conversationRepository.findCommunityConversation();
-  if (!community) return;
+  const community = await ensureCommunityExists();
   await conversationRepository.addParticipant(community._id.toString(), userId);
 };
 
@@ -39,10 +40,11 @@ export const getOrCreatePrivateConversation = async (userA: string, userB: strin
   return conversationRepository.createPrivateConversation(userA, userB);
 };
 
-// Builds exactly what the Sidebar needs: every conversation the user
-// belongs to, enriched with the "other participant" (for private chats)
-// and a last-message preview, in one pass.
+// Builds what the Sidebar needs: every conversation the user belongs to,
+// enriched with the other participant and a last-message preview.
 export const listConversationsForUser = async (userId: string) => {
+  await addUserToCommunity(userId); // self-heals Community on every fetch
+
   const conversations = await conversationRepository.findConversationsForUser(userId);
 
   const enriched = await Promise.all(

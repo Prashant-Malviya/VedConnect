@@ -5,20 +5,13 @@ import { JwtPayload } from "../types/auth.types";
 import { OnlineUser } from "../types/chat.types";
 import * as conversationRepository from "../repositories/conversation.repository";
 
-// Socket.io setup lives in its own module. It ONLY handles connection,
-// disconnection, presence, room membership, and broadcasting - no business
-// logic (that stays in services/controllers). Every conversation (Community
-// or a private chat) is a Socket.io room named after its conversation _id,
-// which is what keeps private messages private: we broadcast to a room,
-// never io.emit() to everyone.
-
+// Every conversation is a Socket.io room named after its conversation _id -
+// broadcasting to a room (never io.emit() to everyone) is what keeps
+// private chats private.
 let io: Server;
 
-// socketId -> the user connected on that socket.
-const socketToUser = new Map<string, OnlineUser>();
-// userId -> every socket that user currently has open (a user can have
-// several tabs/devices open at once).
-const userToSockets = new Map<string, Set<string>>();
+const socketToUser = new Map<string, OnlineUser>(); // socketId -> user
+const userToSockets = new Map<string, Set<string>>(); // userId -> open socket ids
 
 const getOnlineUsersList = (): OnlineUser[] => {
   const seen = new Set<string>();
@@ -40,8 +33,7 @@ export const initSocket = (server: HTTPServer, clientUrl: string): Server => {
     },
   });
 
-  // Socket-level auth: every connection must present a valid JWT, the same
-  // one issued at login. This runs once, before "connection" fires.
+  // Every connection must present a valid JWT before "connection" fires.
   io.use((socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
@@ -66,9 +58,7 @@ export const initSocket = (server: HTTPServer, clientUrl: string): Server => {
     }
     userToSockets.get(user.id)!.add(socket.id);
 
-    // Auto-join every conversation (Community + every private chat) this
-    // user already belongs to, so messages reach them immediately without
-    // the frontend having to explicitly join each room on load.
+    // Auto-join every conversation this user belongs to.
     conversationRepository.findConversationsForUser(user.id).then((conversations) => {
       conversations.forEach((conversation) => socket.join(conversation._id.toString()));
     });
@@ -76,8 +66,6 @@ export const initSocket = (server: HTTPServer, clientUrl: string): Server => {
     io.emit("onlineUsers", getOnlineUsersList());
     socket.broadcast.emit("notification", { message: `${user.name} joined the chat` });
 
-    // Explicit join/leave - mainly useful the moment a brand-new private
-    // conversation is created while the user's socket is already open.
     socket.on("joinConversation", (conversationId: string) => {
       if (typeof conversationId === "string") socket.join(conversationId);
     });
@@ -111,8 +99,7 @@ export const initSocket = (server: HTTPServer, clientUrl: string): Server => {
   return io;
 };
 
-// Lets controllers emit events (e.g. after saving a new message) without
-// each of them creating their own socket.io instance.
+// Lets controllers emit events without creating their own socket.io instance.
 export const getIO = (): Server => {
   if (!io) {
     throw new Error("Socket.io not initialized yet");
@@ -120,9 +107,8 @@ export const getIO = (): Server => {
   return io;
 };
 
-// Makes sure every open socket for this user is in the given conversation's
-// room. Called right after a message is sent, so both a brand-new private
-// conversation and an existing one always reach every connected tab.
+// Ensures every open socket for this user is in the conversation's room -
+// needed right after a brand-new private conversation is created.
 export const joinUserToConversationRoom = (userId: string, conversationId: string) => {
   const socketIds = userToSockets.get(userId);
   if (!socketIds) return;
@@ -131,9 +117,7 @@ export const joinUserToConversationRoom = (userId: string, conversationId: strin
   });
 };
 
-// Used by the message controller to decide whether a freshly-sent message
-// can immediately be marked "delivered" (i.e. is another participant of
-// this conversation online right now).
+// Is another participant of this conversation online right now?
 export const isAnyoneElseOnlineInConversation = (
   participantIds: string[],
   excludeUserId: string

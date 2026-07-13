@@ -8,10 +8,8 @@ export const getConversationHistory = async (conversationId: string, userId: str
   return messageRepository.findMessagesByConversation(conversationId);
 };
 
-// Resolves the target conversation (existing conversationId, or a
-// receiverId that may need a brand-new private conversation), then saves
-// the message into it. Returns both, since the controller needs the
-// conversation's participants to know who to broadcast/notify.
+// Resolves the target conversation (existing id, or a receiverId that may
+// need a brand-new private conversation) and saves the message into it.
 export const sendMessage = async (input: SendMessageInput) => {
   if (!input.text?.trim()) {
     throw new AppError("Message text is required", 400);

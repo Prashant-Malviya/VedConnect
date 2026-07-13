@@ -44,7 +44,6 @@ const ChatPage = () => {
   const loadedConversations = useRef<Set<string>>(new Set());
   const knownConversationIds = useRef<Set<string>>(new Set());
 
-  // Load the user list and conversation list 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -63,15 +62,13 @@ const ChatPage = () => {
   }, [conversations]);
 
   useEffect(() => {
-    if (!users.length || !conversations.length) return;
+    if (!users.length) return;
 
     const normalizedRouteUsername = routeUsername?.trim().toLowerCase().replace(/-/g, " ");
 
     if (normalizedRouteUsername === "community") {
       const community = conversations.find((c) => c.type === "group");
-      if (community) {
-        setSelectedChat({ kind: "community", conversationId: community._id });
-      }
+      setSelectedChat(community ? { kind: "community", conversationId: community._id } : null);
       return;
     }
 
@@ -94,13 +91,10 @@ const ChatPage = () => {
     }
 
     const community = conversations.find((c) => c.type === "group");
-    if (community) {
-      setSelectedChat({ kind: "community", conversationId: community._id });
-    }
+    setSelectedChat(community ? { kind: "community", conversationId: community._id } : null);
   }, [routeUsername, users, conversations]);
 
-  // Connect the shared socket instance now that we have a valid JWT, and
-  // wire up all the realtime event listeners.
+  // Connect the shared socket once we have a valid JWT, and wire up events.
   useEffect(() => {
     if (!token) return;
 
@@ -115,8 +109,7 @@ const ChatPage = () => {
       loadedConversations.current.add(message.conversationId);
 
       if (!knownConversationIds.current.has(message.conversationId)) {
-        // A brand-new conversation we don't know about yet (e.g. someone
-        // else just DM'd us for the first time) - refresh the sidebar.
+        // Someone DM'd us for the first time - refresh the sidebar.
         fetchConversations().then(setConversations).catch(() => {});
       } else {
         setConversations((prev) =>
@@ -183,9 +176,8 @@ const ChatPage = () => {
     };
   }, [token, username]);
 
-  // Lazily loads message history the first time a real (already-created)
-  // conversation is selected. A brand-new private chat (conversationId
-  // still null) simply starts empty - no history to fetch yet.
+  // Loads history the first time a real conversation is selected. A
+  // brand-new private chat (conversationId still null) starts empty.
   useEffect(() => {
     const id = selectedChat?.conversationId;
     if (!id || loadedConversations.current.has(id)) return;
@@ -196,9 +188,7 @@ const ChatPage = () => {
       .catch(() => setError("Failed to load messages"));
   }, [selectedChat]);
 
-  // Tells the server we're actively viewing this conversation, so a
-  // brand-new room (e.g. a private chat that only just got created) is
-  // joined right away instead of waiting for the next reconnect.
+  // Joins the room immediately, rather than waiting for the next reconnect.
   useEffect(() => {
     if (selectedChat?.conversationId) {
       socket.emit("joinConversation", selectedChat.conversationId);
@@ -212,8 +202,7 @@ const ChatPage = () => {
     [conversations]
   );
 
-  // Merges the full user list with any existing private conversations, so
-  // every registered user shows up in Direct Messages - whether or not a
+  // Every registered user shows up in Direct Messages, whether or not a
   // chat with them exists yet - sorted by most recent activity.
   const directMessages: DirectMessageEntry[] = useMemo(() => {
     const conversationByUserId = new Map<string, Conversation>();
@@ -268,9 +257,8 @@ const ChatPage = () => {
           ? await sendMessage({ text, receiverId: selectedChat.user.id })
           : await sendMessage({ text, conversationId: selectedChat.conversationId! });
 
-      // First message in a brand-new private chat: a real conversation now
-      // exists, so switch the selection over to it and refresh the sidebar
-      // so it shows up in Direct Messages with a last-message preview.
+      // First message in a brand-new private chat - switch selection to
+      // the now-real conversation and refresh the sidebar.
       if (selectedChat.kind === "private" && !selectedChat.conversationId) {
         setSelectedChat({ kind: "private", user: selectedChat.user, conversationId: message.conversationId });
         const refreshed = await fetchConversations();

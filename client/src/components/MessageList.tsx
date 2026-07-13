@@ -11,8 +11,7 @@ interface MessageListProps {
 
 const isSameDay = (a: string, b: string) => new Date(a).toDateString() === new Date(b).toDateString();
 
-// Two messages are grouped (no repeated avatar/name) when they're from the
-// same sender, back to back, within a few minutes of each other.
+// Grouped = same sender, back to back, within a few minutes.
 const isGrouped = (current: Message, previous: Message | undefined): boolean => {
   if (!previous) return false;
   if (previous.senderId !== current.senderId) return false;
@@ -20,18 +19,28 @@ const isGrouped = (current: Message, previous: Message | undefined): boolean => 
   return gapMs < 5 * 60 * 1000;
 };
 
-// Renders the scrollable list of messages, inserting date separators and
-// grouping consecutive messages from the same sender. Auto-scrolls to the
-// bottom whenever a new message arrives.
 const MessageList = ({ messages, currentUserId }: MessageListProps) => {
-  const bottomRef = useRef<HTMLDivElement>(null);
+  // We scroll THIS container directly (container.scrollTop), instead of
+  // calling scrollIntoView() on a child. scrollIntoView() asks the browser
+  // to find "the nearest scrollable ancestor" on its own, and if this
+  // container isn't properly height-constrained it can pick the whole page
+  // instead - which is what caused messages to scroll the entire browser
+  // window instead of just this message list. Scrolling the container
+  // ourselves removes that guesswork entirely.
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // useEffect(() => {
-  //   bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  // }, [messages]);
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-soft-gradient">
+    // min-h-0 is required here: this div is a flex child inside a
+    // fixed-height column, and without min-h-0 a flex-1 child refuses to
+    // shrink below its content size - it would grow to fit every message
+    // instead of scrolling, which is what pushed the scroll onto the page.
+    <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 bg-soft-gradient">
       {messages.length === 0 && (
         <div className="flex flex-col items-center justify-center h-full text-center gap-2 text-slate-400">
           <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-500">
@@ -56,7 +65,6 @@ const MessageList = ({ messages, currentUserId }: MessageListProps) => {
           </div>
         );
       })}
-      <div ref={bottomRef} />
     </div>
   );
 };

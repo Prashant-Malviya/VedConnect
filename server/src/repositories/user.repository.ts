@@ -11,14 +11,12 @@ export const findUserById = async (id: string) => {
   return UserModel.findById(id);
 };
 
+// input.password is expected to already be hashed by the service layer.
 export const createUser = async (input: SignupInput) => {
-  // `input.password` is expected to already be hashed by the time it
-  // reaches this function - hashing is the service layer's job.
   return UserModel.create(input);
 };
 
-// Every registered user, password field excluded - backs both the
-// "everyone is in Community" bootstrap and GET /api/users.
+// Password field excluded - backs the Community bootstrap and GET /api/users.
 export const findAllUsers = async () => {
   return UserModel.find().select("-password");
 };

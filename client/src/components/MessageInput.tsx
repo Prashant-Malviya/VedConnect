@@ -14,7 +14,6 @@ const MessageInput = ({ onSend, disabled, conversationId }: MessageInputProps) =
   const [text, setText] = useState("");
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-
   const handleChange = (value: string) => {
     setText(value);
     if (conversationId) {

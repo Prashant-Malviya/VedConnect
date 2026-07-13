@@ -9,8 +9,7 @@ const COLORS = [
   "bg-gradient-to-br from-emerald-500 to-teal-600",
 ];
 
-// Hashes a username into a consistent index, so the same person always
-// gets the same avatar color across messages and sessions.
+// Same username always maps to the same color.
 export const getAvatarColor = (username: string): string => {
   let hash = 0;
   for (let i = 0; i < username.length; i++) {

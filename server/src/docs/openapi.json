@@ -1,0 +1,327 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "VedConnect API",
+    "description": "REST API for VedConnect - a realtime chat app with a Community group chat and 1-to-1 private messaging. Every response follows the same `{ success, message, data }` shape. Realtime events (new messages, typing, presence) are delivered over Socket.io, not documented here.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "/api", "description": "Same origin the docs are served from" }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Signup, login, and the current user" },
+    { "name": "Users", "description": "Registered users" },
+    { "name": "Conversations", "description": "Community + private conversations, and their message history" },
+    { "name": "Messages", "description": "Sending a message into a conversation" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Paste the token returned by POST /auth/login. Every route below except signup/login requires this."
+      }
+    },
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string", "example": "Invalid or expired token" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "665f1b2c9a1e4a3b2c8d9f01" },
+          "name": { "type": "string", "example": "Asha Verma" },
+          "email": { "type": "string", "example": "asha@example.com" }
+        }
+      },
+      "SignupRequest": {
+        "type": "object",
+        "required": ["name", "email", "password"],
+        "properties": {
+          "name": { "type": "string", "example": "Asha Verma" },
+          "email": { "type": "string", "example": "asha@example.com" },
+          "password": { "type": "string", "format": "password", "example": "secret123", "minLength": 6 }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "example": "asha@example.com" },
+          "password": { "type": "string", "format": "password", "example": "secret123" }
+        }
+      },
+      "LoginResponseData": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIs..." },
+          "user": { "$ref": "#/components/schemas/User" }
+        }
+      },
+      "Conversation": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "665f1c3e9a1e4a3b2c8d9f10" },
+          "type": { "type": "string", "enum": ["group", "private"] },
+          "name": { "type": "string", "example": "🌍 VedConnect Community" },
+          "participants": { "type": "array", "items": { "type": "string" } },
+          "otherUser": {
+            "allOf": [{ "$ref": "#/components/schemas/User" }],
+            "nullable": true,
+            "description": "Set only for private conversations - the other participant."
+          },
+          "lastMessage": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "text": { "type": "string" },
+              "createdAt": { "type": "string", "format": "date-time" }
+            }
+          },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "_id": { "type": "string", "example": "665f1d4f9a1e4a3b2c8d9f21" },
+          "conversationId": { "type": "string" },
+          "senderId": { "type": "string" },
+          "senderName": { "type": "string", "example": "Asha Verma" },
+          "receiverId": { "type": "string", "nullable": true },
+          "text": { "type": "string", "example": "Hey, how's it going?" },
+          "status": { "type": "string", "enum": ["sent", "delivered"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string", "example": "Hey, how's it going?" },
+          "conversationId": {
+            "type": "string",
+            "description": "Use when replying inside an existing conversation (Community or a private chat you've already messaged in)."
+          },
+          "receiverId": {
+            "type": "string",
+            "description": "Use instead of conversationId for the very first message to someone new - the server creates the private conversation for you."
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/signup": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Create an account",
+        "description": "Every new user is automatically added to the Community conversation.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SignupRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing/invalid fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+          "409": { "description": "Email already registered", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log in",
+        "description": "Returns a JWT - use it as the Bearer token for every other route.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/LoginResponseData" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Invalid email or password", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get the currently logged-in user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Missing/invalid token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List every registered user except yourself",
+        "description": "Backs the Direct Messages list in the sidebar.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Users fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/User" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Missing/invalid token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "tags": ["Conversations"],
+        "summary": "List every conversation you belong to",
+        "description": "Includes the Community conversation and every private conversation you're a participant of, each with a last-message preview.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Conversations fetched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Conversation" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Missing/invalid token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/conversations/{id}/messages": {
+      "get": {
+        "tags": ["Conversations"],
+        "summary": "Get a conversation's full message history",
+        "description": "You must be a participant of the conversation, or this returns 403.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Conversation _id (get it from GET /conversations)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Messages fetched, oldest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Message" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Missing/invalid token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+          "403": { "description": "You are not part of this conversation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+          "404": { "description": "Conversation not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    },
+    "/messages": {
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Send a message",
+        "description": "Supply EITHER conversationId (reply in an existing chat) OR receiverId (first message to someone new - creates the private conversation). The sender is taken from your JWT, not the request body. On success, the message is also broadcast over Socket.io to everyone else in the conversation.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SendMessageRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Message sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/Message" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing text, or missing both conversationId and receiverId", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+          "401": { "description": "Missing/invalid token", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } },
+          "403": { "description": "You are not part of this conversation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } } } }
+        }
+      }
+    }
+  }
+}
