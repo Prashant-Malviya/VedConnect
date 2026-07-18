@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ChatWindow from "../components/ChatWindow";
+import CreateCommunityModal from "../components/CreateCommunityModal";
+import BrowseCommunitiesModal from "../components/BrowseCommunitiesModal";
 import { Message } from "../types/message.types";
 import { OnlineUser } from "../types/chat.types";
 import { UserListItem } from "../types/user.types";
 import { Conversation, ConversationUser, DirectMessageEntry, SelectedChat } from "../types/conversation.types";
+import { Community } from "../types/community.types";
 import { fetchUsers, fetchConversations, fetchConversationMessages, sendMessage } from "../services/api";
+import { fetchMyCommunities } from "../services/community.api";
 import { socket } from "../sockets/socket";
 import { useAuth } from "../context/AuthContext";
 
@@ -20,6 +24,11 @@ interface TypingPayload {
   conversationId: string;
 }
 
+interface AiThinkingPayload {
+  conversationId: string;
+  assistantName: string;
+}
+
 interface NotificationPayload {
   message: string;
 }
@@ -27,29 +36,40 @@ interface NotificationPayload {
 const ChatPage = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
-  const { username: routeUsername } = useParams<{ username?: string }>();
+  const { username: routeUsername, communitySlug } = useParams<{ username?: string; communitySlug?: string }>();
   const username = user?.name || "";
   const userId = user?.id || "";
 
   const [users, setUsers] = useState<UserListItem[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
   const [selectedChat, setSelectedChat] = useState<SelectedChat | null>(null);
   const [messagesByKey, setMessagesByKey] = useState<Record<string, Message[]>>({});
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [typingByConversation, setTypingByConversation] = useState<Record<string, string[]>>({});
+  const [vedThinkingConversations, setVedThinkingConversations] = useState<Set<string>>(new Set());
   const [isConnected, setIsConnected] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBrowseModal, setShowBrowseModal] = useState(false);
 
   const loadedConversations = useRef<Set<string>>(new Set());
   const knownConversationIds = useRef<Set<string>>(new Set());
 
+  const loadCommunities = () => fetchMyCommunities().then(setCommunities);
+
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const [userList, conversationList] = await Promise.all([fetchUsers(), fetchConversations()]);
+        const [userList, conversationList, communityList] = await Promise.all([
+          fetchUsers(),
+          fetchConversations(),
+          fetchMyCommunities(),
+        ]);
         setUsers(userList);
         setConversations(conversationList);
+        setCommunities(communityList);
       } catch (err) {
         setError("Failed to load conversations");
       }
@@ -61,19 +81,28 @@ const ChatPage = () => {
     knownConversationIds.current = new Set(conversations.map((c) => c._id));
   }, [conversations]);
 
+  // Resolves the current route (/chat, /chat/c/:slug, /chat/u/:username) into a SelectedChat.
   useEffect(() => {
-    if (!users.length) return;
-
-    const normalizedRouteUsername = routeUsername?.trim().toLowerCase().replace(/-/g, " ");
-
-    if (normalizedRouteUsername === "community") {
-      const community = conversations.find((c) => c.type === "group");
-      setSelectedChat(community ? { kind: "community", conversationId: community._id } : null);
+    if (communitySlug) {
+      const community = communities.find((c) => c.slug === communitySlug);
+      setSelectedChat(
+        community
+          ? {
+              kind: "community",
+              conversationId: community.conversationId,
+              communityId: community.id,
+              name: community.name,
+              slug: community.slug,
+            }
+          : null
+      );
       return;
     }
 
-    if (normalizedRouteUsername) {
-      const matchedUser = users.find((u) => u.name.toLowerCase() === normalizedRouteUsername);
+    if (routeUsername) {
+      if (!users.length) return;
+      const normalized = routeUsername.trim().toLowerCase().replace(/-/g, " ");
+      const matchedUser = users.find((u) => u.name.toLowerCase() === normalized);
       if (!matchedUser) {
         setSelectedChat(null);
         return;
@@ -90,16 +119,24 @@ const ChatPage = () => {
       return;
     }
 
-    const community = conversations.find((c) => c.type === "group");
-    setSelectedChat(community ? { kind: "community", conversationId: community._id } : null);
-  }, [routeUsername, users, conversations]);
+    // No route param - default to the default (global) community, or the first available.
+    if (communities.length === 0) return;
+    const defaultCommunity = communities.find((c) => c.isDefault) || communities[0];
+    setSelectedChat({
+      kind: "community",
+      conversationId: defaultCommunity.conversationId,
+      communityId: defaultCommunity.id,
+      name: defaultCommunity.name,
+      slug: defaultCommunity.slug,
+    });
+  }, [routeUsername, communitySlug, users, conversations, communities]);
 
-  // Connect the shared socket once we have a valid JWT, and wire up events.
+  // Wire up chat-related socket events. Connection lifecycle itself (auth,
+  // connect/disconnect) is owned by SocketProvider at the app root now, so
+  // calls can keep ringing on any page - this effect only attaches
+  // chat-specific listeners to the already-connected shared socket.
   useEffect(() => {
     if (!token) return;
-
-    socket.auth = { token };
-    socket.connect();
 
     const handleNewMessage = (message: Message) => {
       setMessagesByKey((prev) => ({
@@ -149,30 +186,54 @@ const ChatPage = () => {
       }));
     };
 
+    const handleAiThinking = ({ conversationId }: AiThinkingPayload) => {
+      setVedThinkingConversations((prev) => new Set(prev).add(conversationId));
+    };
+
+    const handleAiStoppedThinking = ({ conversationId }: { conversationId: string }) => {
+      setVedThinkingConversations((prev) => {
+        const next = new Set(prev);
+        next.delete(conversationId);
+        return next;
+      });
+    };
+
     const handleNotification = ({ message }: NotificationPayload) => {
       setNotification(message);
       setTimeout(() => setNotification(null), 4000);
     };
 
-    socket.on("connect", () => setIsConnected(true));
-    socket.on("disconnect", () => setIsConnected(false));
+    const handleConnect = () => setIsConnected(true);
+    const handleDisconnect = () => setIsConnected(false);
+
+    // Socket.io fires "connect" synchronously if already connected by the
+    // time we attach - but if SocketProvider connected before this effect
+    // ran, we still want isConnected to start true rather than waiting for
+    // the next connect event.
+    setIsConnected(socket.connected);
+
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
     socket.on("newMessage", handleNewMessage);
     socket.on("messageStatusUpdate", handleStatusUpdate);
     socket.on("onlineUsers", handleOnlineUsers);
     socket.on("userTyping", handleUserTyping);
     socket.on("userStopTyping", handleUserStopTyping);
+    socket.on("aiThinking", handleAiThinking);
+    socket.on("aiStoppedThinking", handleAiStoppedThinking);
     socket.on("notification", handleNotification);
 
     return () => {
-      socket.off("connect");
-      socket.off("disconnect");
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
       socket.off("newMessage", handleNewMessage);
       socket.off("messageStatusUpdate", handleStatusUpdate);
       socket.off("onlineUsers", handleOnlineUsers);
       socket.off("userTyping", handleUserTyping);
       socket.off("userStopTyping", handleUserStopTyping);
+      socket.off("aiThinking", handleAiThinking);
+      socket.off("aiStoppedThinking", handleAiStoppedThinking);
       socket.off("notification", handleNotification);
-      socket.disconnect();
     };
   }, [token, username]);
 
@@ -196,11 +257,7 @@ const ChatPage = () => {
   }, [selectedChat?.conversationId]);
 
   const onlineUserIds = useMemo(() => new Set(onlineUsers.map((u) => u.userId)), [onlineUsers]);
-
-  const communityConversation = useMemo(
-    () => conversations.find((c) => c.type === "group") || null,
-    [conversations]
-  );
+  const myCommunityIds = useMemo(() => new Set(communities.map((c) => c.id)), [communities]);
 
   // Every registered user shows up in Direct Messages, whether or not a
   // chat with them exists yet - sorted by most recent activity.
@@ -235,18 +292,23 @@ const ChatPage = () => {
   const activeTypingUsers = selectedChat?.conversationId
     ? typingByConversation[selectedChat.conversationId] || []
     : [];
+  const isVedThinking = Boolean(
+    selectedChat?.conversationId && vedThinkingConversations.has(selectedChat.conversationId)
+  );
   const isOtherUserOnline = selectedChat?.kind === "private" ? onlineUserIds.has(selectedChat.user.id) : false;
 
-  const handleSelectCommunity = () => {
-    if (!communityConversation) return;
-
-    const slug = "community";
-    navigate(`/chat/${encodeURIComponent(slug)}`);
+  const handleSelectCommunity = (community: Community) => {
+    navigate(`/chat/c/${encodeURIComponent(community.slug)}`);
   };
 
-  const handleSelectUser = (chatUser: ConversationUser, conversation: Conversation | null) => {
+  const handleSelectUser = (chatUser: ConversationUser, _conversation: Conversation | null) => {
     const slug = chatUser.name.trim().toLowerCase().replace(/\s+/g, "-");
-    navigate(`/chat/${encodeURIComponent(slug)}`);
+    navigate(`/chat/u/${encodeURIComponent(slug)}`);
+  };
+
+  const handleCommunityCreatedOrJoined = (community: Community) => {
+    setCommunities((prev) => [...prev.filter((c) => c.id !== community.id), community]);
+    navigate(`/chat/c/${encodeURIComponent(community.slug)}`);
   };
 
   const handleSend = async (text: string) => {
@@ -273,7 +335,7 @@ const ChatPage = () => {
     <div className="min-h-[calc(100vh-64px)] bg-soft-gradient flex flex-col items-center py-8 px-4">
       <div className="text-center mb-5">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Your Conversations</h1>
-        <p className="text-sm text-slate-500 mt-1">Real-time, secure, and always in sync.</p>
+        <p className="text-sm text-slate-500 mt-1">Real-time, secure, and always in sync - with Ved AI built in.</p>
       </div>
       {notification && (
         <p className="bg-purple-100 text-purple-700 text-sm px-4 py-1.5 rounded-full mb-3 shadow-sm">
@@ -284,19 +346,36 @@ const ChatPage = () => {
       <ChatWindow
         currentUsername={username}
         currentUserId={userId}
-        communityConversation={communityConversation}
+        communities={communities}
         directMessages={directMessages}
         selectedChat={selectedChat}
         onSelectCommunity={handleSelectCommunity}
         onSelectUser={handleSelectUser}
+        onCreateCommunity={() => setShowCreateModal(true)}
+        onBrowseCommunities={() => setShowBrowseModal(true)}
         messages={activeMessages}
         onSend={handleSend}
         isConnected={isConnected}
         typingUsers={activeTypingUsers}
+        isVedThinking={isVedThinking}
         isOtherUserOnline={isOtherUserOnline}
         activeConversationId={selectedChat?.conversationId || null}
-        isSingleChatView={Boolean(routeUsername)}
+        isSingleChatView={Boolean(routeUsername || communitySlug)}
       />
+
+      {showCreateModal && (
+        <CreateCommunityModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={handleCommunityCreatedOrJoined}
+        />
+      )}
+      {showBrowseModal && (
+        <BrowseCommunitiesModal
+          onClose={() => setShowBrowseModal(false)}
+          onJoined={handleCommunityCreatedOrJoined}
+          myCommunityIds={myCommunityIds}
+        />
+      )}
     </div>
   );
 };

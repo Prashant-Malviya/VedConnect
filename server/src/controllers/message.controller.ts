@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import * as messageService from "../services/message.service";
 import { sendSuccess } from "../utils/response.util";
 import { getIO, isAnyoneElseOnlineInConversation, joinUserToConversationRoom } from "../sockets";
+import { maybeRespondAsVed } from "../services/ai/AIOrchestratorService";
 
 export const postMessage = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -37,6 +38,12 @@ export const postMessage = async (req: Request, res: Response, next: NextFunctio
     }
 
     sendSuccess(res, 201, "Message sent", message);
+
+    // Fire-and-forget: never delay or fail the sender's own request because
+    // of Ved. Errors are handled/logged entirely inside the orchestrator.
+    maybeRespondAsVed(conversationIdStr, message.text).catch((error) => {
+      console.error("Unhandled error triggering Ved:", error);
+    });
   } catch (error) {
     next(error);
   }

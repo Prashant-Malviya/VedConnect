@@ -1,5 +1,6 @@
 import { Message } from "../types/message.types";
 import Avatar from "./Avatar";
+import AiMessage from "./AiMessage";
 
 interface MessageItemProps {
   message: Message;
@@ -11,6 +12,13 @@ const formatTime = (isoDate: string): string =>
   new Date(isoDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 const MessageItem = ({ message, isOwnMessage, grouped = false }: MessageItemProps) => {
+  // AI messages are stored in the exact same collection/history as user
+  // messages, but must never look like a normal chat bubble - a completely
+  // separate component owns their rendering.
+  if (message.senderType === "AI") {
+    return <AiMessage message={message} grouped={grouped} />;
+  }
+
   return (
     <div
       className={`flex gap-2.5 ${grouped ? "mb-1" : "mb-4"} animate-fade-in-up ${

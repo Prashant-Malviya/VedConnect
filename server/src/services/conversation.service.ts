@@ -1,33 +1,8 @@
 import * as conversationRepository from "../repositories/conversation.repository";
 import * as userRepository from "../repositories/user.repository";
 import * as messageRepository from "../repositories/message.repository";
+import * as communityService from "./community.service";
 import { AppError } from "../utils/app-error";
-
-// Self-healing: if Community was ever wiped mid-session, this recreates it
-// on the spot instead of requiring a server restart.
-const ensureCommunityExists = async () => {
-  const existing = await conversationRepository.findCommunityConversation();
-  if (existing) return existing;
-  return conversationRepository.createCommunityConversation();
-};
-
-// Called once at server startup so Community is ready before any request.
-export const ensureCommunityConversation = async () => {
-  const community = await ensureCommunityExists();
-
-  const allUserIds = await userRepository.findAllUserIds();
-  for (const userId of allUserIds) {
-    await conversationRepository.addParticipant(community._id.toString(), userId);
-  }
-
-  return community;
-};
-
-// Called after signup, and lazily whenever conversations are listed.
-export const addUserToCommunity = async (userId: string) => {
-  const community = await ensureCommunityExists();
-  await conversationRepository.addParticipant(community._id.toString(), userId);
-};
 
 export const getOrCreatePrivateConversation = async (userA: string, userB: string) => {
   if (userA === userB) {
@@ -41,9 +16,11 @@ export const getOrCreatePrivateConversation = async (userA: string, userB: strin
 };
 
 // Builds what the Sidebar needs: every conversation the user belongs to,
-// enriched with the other participant and a last-message preview.
+// enriched with the other participant and a last-message preview. Group
+// conversations now also carry communityId, so the frontend can tell
+// multiple communities apart (previously there was only ever one).
 export const listConversationsForUser = async (userId: string) => {
-  await addUserToCommunity(userId); // self-heals Community on every fetch
+  await communityService.addUserToDefaultCommunity(userId); // self-heals default Community membership on every fetch
 
   const conversations = await conversationRepository.findConversationsForUser(userId);
 
@@ -68,6 +45,7 @@ export const listConversationsForUser = async (userId: string) => {
         _id: conversation._id,
         type: conversation.type,
         name: conversation.type === "group" ? conversation.name : otherUser?.name || "Unknown",
+        communityId: conversation.communityId || null,
         participants: conversation.participants,
         otherUser,
         lastMessage: lastMessage

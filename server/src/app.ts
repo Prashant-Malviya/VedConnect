@@ -5,6 +5,8 @@ import messageRoutes from "./routes/message.routes";
 import authRoutes from "./routes/auth.routes";
 import conversationRoutes from "./routes/conversation.routes";
 import userRoutes from "./routes/user.routes";
+import communityRoutes from "./routes/community.routes";
+import callRoutes from "./routes/call.routes";
 import { errorHandler } from "./middleware/error.middleware";
 import { notFoundHandler } from "./middleware/not-found.middleware";
 import openApiDocument from "./docs/openapi.json";
@@ -20,6 +22,8 @@ export const createApp = (clientUrl: string): Application => {
   app.use("/api", messageRoutes);
   app.use("/api", conversationRoutes);
   app.use("/api", userRoutes);
+  app.use("/api", communityRoutes);
+  app.use("/api", callRoutes);
 
   // Interactive API docs: /api/docs is a live Swagger UI where every route
   // can be tried directly from the browser ("Try it out" - paste a JWT

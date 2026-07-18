@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { JwtPayload } from "../types/auth.types";
 import { OnlineUser } from "../types/chat.types";
 import * as conversationRepository from "../repositories/conversation.repository";
+import { registerCallHandlers, handleUserFullyOffline } from "./call.socket";
 
 // Every conversation is a Socket.io room named after its conversation _id -
 // broadcasting to a room (never io.emit() to everyone) is what keeps
@@ -84,12 +85,15 @@ export const initSocket = (server: HTTPServer, clientUrl: string): Server => {
       socket.to(conversationId).emit("userStopTyping", { username: user.name, conversationId });
     });
 
+    registerCallHandlers(socket, user.id, user.name);
+
     socket.on("disconnect", () => {
       socketToUser.delete(socket.id);
       const sockets = userToSockets.get(user.id);
       sockets?.delete(socket.id);
       if (sockets && sockets.size === 0) {
         userToSockets.delete(user.id);
+        handleUserFullyOffline(user.id); // ends any call this user was ringing/on - their last socket just closed
       }
       io.emit("onlineUsers", getOnlineUsersList());
       socket.broadcast.emit("notification", { message: `${user.name} left the chat` });
@@ -123,4 +127,14 @@ export const isAnyoneElseOnlineInConversation = (
   excludeUserId: string
 ): boolean => {
   return participantIds.some((id) => id !== excludeUserId && userToSockets.has(id));
+};
+
+export const isUserOnline = (userId: string): boolean => userToSockets.has(userId);
+
+// Emits an event to every open socket/tab a user has - calls (like
+// messages) should ring/update on every device the user is logged in on.
+export const emitToUser = (userId: string, event: string, payload: unknown): void => {
+  const socketIds = userToSockets.get(userId);
+  if (!socketIds) return;
+  socketIds.forEach((socketId) => io.to(socketId).emit(event, payload));
 };

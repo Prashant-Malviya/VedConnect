@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import * as userRepository from "../repositories/user.repository";
-import * as conversationService from "./conversation.service";
+import * as communityService from "./community.service";
 import { SignupInput, LoginInput, JwtPayload } from "../types/auth.types";
 import { AppError } from "../utils/app-error";
 
@@ -36,9 +36,9 @@ export const signup = async (input: SignupInput) => {
   const hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
   const user = await userRepository.createUser({ ...input, password: hashedPassword });
 
-  // Every registered user automatically belongs to Community chat, from
-  // the moment their account exists.
-  await conversationService.addUserToCommunity(user._id.toString());
+  // Every registered user automatically belongs to the default Community,
+  // from the moment their account exists.
+  await communityService.addUserToDefaultCommunity(user._id.toString());
 
   return user;
 };

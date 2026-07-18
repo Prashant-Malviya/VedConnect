@@ -14,7 +14,8 @@ const isSameDay = (a: string, b: string) => new Date(a).toDateString() === new D
 // Grouped = same sender, back to back, within a few minutes.
 const isGrouped = (current: Message, previous: Message | undefined): boolean => {
   if (!previous) return false;
-  if (previous.senderId !== current.senderId) return false;
+  if (previous.senderType !== current.senderType) return false;
+  if (previous.senderType === "USER" && previous.senderId !== current.senderId) return false;
   const gapMs = new Date(current.createdAt).getTime() - new Date(previous.createdAt).getTime();
   return gapMs < 5 * 60 * 1000;
 };
