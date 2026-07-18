@@ -1,8 +1,9 @@
 import { Socket } from "socket.io";
 import * as callService from "../services/call.service";
 import * as userRepository from "../repositories/user.repository";
+import * as voiceAIService from "../services/voice/VoiceAIService";
 import { CallEndReason } from "../types/call.types";
-import { emitToUser, isUserOnline } from "./index";
+import { emitToUser, isUserOnline, joinUserToRoom, getIO } from "./index";
 
 // Pure signaling relay: this module never touches RTCPeerConnection/SDP
 // content, it just forwards offer/answer/ice-candidate payloads verbatim
@@ -19,6 +20,12 @@ export const registerCallHandlers = (socket: Socket, userId: string, userName: s
     const payload = { callId, reason, endedBy: endedByUserId || null };
     emitToUser(session.callerId, "call-ended", payload);
     emitToUser(session.receiverId, "call-ended", payload);
+
+    // Voice-AI state (live transcript, in-flight generation guard) is
+    // entirely scoped to the call's lifetime - tear it down alongside the
+    // call itself, and release the Socket.io room used to broadcast it.
+    voiceAIService.cleanupCall(callId);
+    getIO().in(`call:${callId}`).socketsLeave(`call:${callId}`);
   };
 
   // --- 1. Call initiation ---
@@ -55,6 +62,12 @@ export const registerCallHandlers = (socket: Socket, userId: string, userName: s
   socket.on("accept-call", ({ callId }: { callId: string }) => {
     const session = callService.markOngoing(callId);
     if (!session || session.receiverId !== userId) return;
+
+    // Everything voice-AI broadcasts (transcript entries, thinking/speaking
+    // status) targets this room - joining both sides here, once, is all
+    // that's needed for VoiceAIService/voice-call.socket.ts to reach them.
+    joinUserToRoom(session.callerId, `call:${callId}`);
+    joinUserToRoom(session.receiverId, `call:${callId}`);
 
     emitToUser(session.callerId, "call-accepted", { callId });
   });
@@ -119,6 +132,8 @@ export const handleUserFullyOffline = (userId: string): void => {
       if (!endedSession) return;
       const otherUserId = endedSession.callerId === userId ? endedSession.receiverId : endedSession.callerId;
       emitToUser(otherUserId, "call-ended", { callId: session.callId, reason: "disconnected", endedBy: userId });
+      voiceAIService.cleanupCall(session.callId);
+      getIO().in(`call:${session.callId}`).socketsLeave(`call:${session.callId}`);
     })
     .catch((err) => console.error("Failed to end call on disconnect:", err));
 };

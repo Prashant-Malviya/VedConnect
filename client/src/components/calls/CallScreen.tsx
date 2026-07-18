@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Mic, MicOff, PhoneOff } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Sparkles } from "lucide-react";
 import Avatar from "../Avatar";
+import VoiceTranscriptPanel from "./VoiceTranscriptPanel";
 import { ActiveCall } from "../../types/call.types";
 
 interface CallScreenProps {
@@ -42,6 +43,8 @@ const CallScreen = ({ call, onCancel, onEnd, onToggleMute }: CallScreenProps) =>
   const isOngoing = call.uiState === "ongoing";
   const isOutgoingRinging = call.uiState === "outgoing-ringing";
 
+  const vedStatusLabel = call.isVedThinking ? "Ved is thinking..." : call.isVedSpeaking ? "Ved is speaking..." : null;
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm px-4">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-card p-8 text-center animate-fade-in-up">
@@ -57,9 +60,22 @@ const CallScreen = ({ call, onCancel, onEnd, onToggleMute }: CallScreenProps) =>
         </div>
 
         <p className="text-lg font-semibold text-slate-800">{call.otherParticipant.name}</p>
-        <p className="text-sm text-slate-400 mb-8">
+        <p className="text-sm text-slate-400 mb-2">
           {isOngoing ? formatDuration(elapsedSeconds) : statusLabel(call)}
         </p>
+
+        {isOngoing && vedStatusLabel && (
+          <p className="flex items-center justify-center gap-1.5 text-xs text-indigo-500 italic mb-3">
+            <Sparkles className="w-3.5 h-3.5" />
+            {vedStatusLabel}
+          </p>
+        )}
+
+        {isOngoing && (
+          <div className="mb-6 bg-slate-50/60 rounded-2xl p-2">
+            <VoiceTranscriptPanel entries={call.transcript} />
+          </div>
+        )}
 
         <div className="flex items-center justify-center gap-6">
           {isOngoing && (
@@ -82,6 +98,10 @@ const CallScreen = ({ call, onCancel, onEnd, onToggleMute }: CallScreenProps) =>
             <PhoneOff className="w-6 h-6" />
           </button>
         </div>
+
+        {isOngoing && (
+          <p className="text-[11px] text-slate-300 mt-5">Say "Hey Ved" anytime to bring the AI into the conversation</p>
+        )}
       </div>
     </div>
   );

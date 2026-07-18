@@ -5,6 +5,7 @@ import { JwtPayload } from "../types/auth.types";
 import { OnlineUser } from "../types/chat.types";
 import * as conversationRepository from "../repositories/conversation.repository";
 import { registerCallHandlers, handleUserFullyOffline } from "./call.socket";
+import { registerVoiceCallHandlers } from "./voice-call.socket";
 
 // Every conversation is a Socket.io room named after its conversation _id -
 // broadcasting to a room (never io.emit() to everyone) is what keeps
@@ -86,6 +87,7 @@ export const initSocket = (server: HTTPServer, clientUrl: string): Server => {
     });
 
     registerCallHandlers(socket, user.id, user.name);
+    registerVoiceCallHandlers(socket, user.id, user.name);
 
     socket.on("disconnect", () => {
       socketToUser.delete(socket.id);
@@ -114,10 +116,16 @@ export const getIO = (): Server => {
 // Ensures every open socket for this user is in the conversation's room -
 // needed right after a brand-new private conversation is created.
 export const joinUserToConversationRoom = (userId: string, conversationId: string) => {
+  joinUserToRoom(userId, conversationId);
+};
+
+// Generic version of the above - used for conversation rooms and call
+// rooms (call:<callId>) alike.
+export const joinUserToRoom = (userId: string, room: string) => {
   const socketIds = userToSockets.get(userId);
   if (!socketIds) return;
   socketIds.forEach((socketId) => {
-    io.sockets.sockets.get(socketId)?.join(conversationId);
+    io.sockets.sockets.get(socketId)?.join(room);
   });
 };
 

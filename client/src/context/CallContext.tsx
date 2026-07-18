@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode, RefObject } from "react";
 import { socket } from "../sockets/socket";
 import { WebRTCPeer } from "../services/webrtc";
-import { ActiveCall, CallParticipant, CallEndReason } from "../types/call.types";
+import { SpeechToTextService } from "../services/voice/SpeechToTextService";
+import { ActiveCall, CallParticipant, CallEndReason, VoiceTranscriptEntry } from "../types/call.types";
 import { useAuth } from "./AuthContext";
 
 interface CallContextType {
@@ -23,6 +24,8 @@ interface IncomingCallPayload {
   caller: CallParticipant;
 }
 
+const MAX_TRANSCRIPT_ENTRIES = 200; // mirrors the server's TranscriptService cap
+
 // This is the only place in the app that owns a WebRTCPeer instance and
 // drives the offer/answer/ice-candidate exchange - components only ever
 // read `activeCall` and call the action functions below. Mounted once at
@@ -35,16 +38,28 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 
   const peerRef = useRef<WebRTCPeer | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const vedAudioRef = useRef<HTMLAudioElement | null>(null);
+  const sttRef = useRef<SpeechToTextService | null>(null);
   // Buffers the offer's SDP for a not-yet-accepted incoming call, since the
   // "offer" socket event can arrive before the callee has pressed Accept.
   const pendingOfferRef = useRef<{ callId: string; sdp: RTCSessionDescriptionInit } | null>(null);
+
+  const stopVoiceAI = useCallback(() => {
+    sttRef.current?.stop();
+    sttRef.current = null;
+    if (vedAudioRef.current) {
+      vedAudioRef.current.pause();
+      vedAudioRef.current.src = "";
+    }
+  }, []);
 
   const cleanupPeer = useCallback(() => {
     peerRef.current?.close();
     peerRef.current = null;
     pendingOfferRef.current = null;
     if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
-  }, []);
+    stopVoiceAI();
+  }, [stopVoiceAI]);
 
   const resetCall = useCallback(
     (reason: CallEndReason | null) => {
@@ -56,31 +71,52 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     [cleanupPeer]
   );
 
-  const createPeer = useCallback((callId: string): WebRTCPeer => {
-    const peer = new WebRTCPeer({
-      onRemoteStream: (stream) => {
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = stream;
-          remoteAudioRef.current.play().catch(() => {});
-        }
-      },
-      onIceCandidate: (candidate) => {
-        socket.emit("ice-candidate", { callId, candidate });
-      },
-      onConnectionStateChange: (state) => {
-        if (state === "connected") {
-          setActiveCall((prev) => (prev ? { ...prev, uiState: "ongoing", startedAt: prev.startedAt || new Date() } : prev));
-        }
-        if (state === "failed" || state === "closed") {
-          // The other side's browser/network dropped the peer connection -
-          // signal our own end-call so both sides and the DB agree it ended.
-          socket.emit("end-call", { callId });
-        }
+  // Starts each participant's own local speech recognition once the call
+  // is actually connected - see SpeechToTextService.ts for why this runs
+  // client-side rather than on the server. Recognized utterances are sent
+  // to the server as plain text; the server never receives call audio.
+  const startVoiceAI = useCallback((callId: string) => {
+    if (sttRef.current) return; // already running for this call
+    const stt = new SpeechToTextService({
+      onFinalResult: (text) => {
+        socket.emit("voice-transcript", { callId, text });
       },
     });
-    peerRef.current = peer;
-    return peer;
+    stt.start();
+    sttRef.current = stt;
   }, []);
+
+  const createPeer = useCallback(
+    (callId: string): WebRTCPeer => {
+      const peer = new WebRTCPeer({
+        onRemoteStream: (stream) => {
+          if (remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = stream;
+            remoteAudioRef.current.play().catch(() => {});
+          }
+        },
+        onIceCandidate: (candidate) => {
+          socket.emit("ice-candidate", { callId, candidate });
+        },
+        onConnectionStateChange: (state) => {
+          if (state === "connected") {
+            setActiveCall((prev) =>
+              prev ? { ...prev, uiState: "ongoing", startedAt: prev.startedAt || new Date() } : prev
+            );
+            startVoiceAI(callId);
+          }
+          if (state === "failed" || state === "closed") {
+            // The other side's browser/network dropped the peer connection -
+            // signal our own end-call so both sides and the DB agree it ended.
+            socket.emit("end-call", { callId });
+          }
+        },
+      });
+      peerRef.current = peer;
+      return peer;
+    },
+    [startVoiceAI]
+  );
 
   const startCall = useCallback(
     (participant: CallParticipant) => {
@@ -92,6 +128,9 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         uiState: "outgoing-ringing",
         startedAt: null,
         isMuted: false,
+        transcript: [],
+        isVedThinking: false,
+        isVedSpeaking: false,
       });
       socket.emit("call-user", { receiverId: participant.id });
     },
@@ -169,6 +208,9 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
           uiState: "incoming-ringing",
           startedAt: null,
           isMuted: false,
+          transcript: [],
+          isVedThinking: false,
+          isVedSpeaking: false,
         };
       });
     };
@@ -213,6 +255,60 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     const handleCallBusy = () => resetCall("busy");
     const handleUserOffline = () => resetCall("offline");
 
+    // --- Voice AI (Ved participating in the live call) ---
+    const handleVoiceTranscript = (entry: VoiceTranscriptEntry) => {
+      setActiveCall((prev) => {
+        if (!prev || prev.callId !== entry.callId) return prev;
+        const transcript = [...prev.transcript, entry].slice(-MAX_TRANSCRIPT_ENTRIES);
+        return { ...prev, transcript };
+      });
+    };
+
+    const handleAiThinkingVoice = ({ callId }: { callId: string }) => {
+      setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedThinking: true } : prev));
+    };
+
+    const handleAiStoppedThinkingVoice = ({ callId }: { callId: string }) => {
+      setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedThinking: false } : prev));
+    };
+
+    const handleAiSpeakingVoice = ({
+      callId,
+      audioBase64,
+      audioMimeType,
+    }: {
+      callId: string;
+      text: string;
+      audioBase64: string | null;
+      audioMimeType: string | null;
+    }) => {
+      setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: true } : prev));
+
+      // No audio (TTS unavailable/failed) - the reply still lands in the
+      // transcript via voice-transcript-broadcast, so just clear the
+      // "speaking" indicator shortly after; the UI falls back to text.
+      if (!audioBase64) {
+        setTimeout(() => {
+          setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
+        }, 1500);
+        return;
+      }
+
+      if (!vedAudioRef.current) vedAudioRef.current = new Audio();
+      const audio = vedAudioRef.current;
+      audio.src = `data:${audioMimeType || "audio/mpeg"};base64,${audioBase64}`;
+      audio.onended = () => {
+        setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
+      };
+      audio.onerror = () => {
+        // Playback failed client-side - same graceful fallback as no-audio above.
+        setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
+      };
+      audio.play().catch(() => {
+        setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
+      });
+    };
+
     socket.on("call-ringing", handleCallRinging);
     socket.on("incoming-call", handleIncomingCall);
     socket.on("call-accepted", handleCallAccepted);
@@ -222,6 +318,10 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     socket.on("call-ended", handleCallEnded);
     socket.on("call-busy", handleCallBusy);
     socket.on("user-offline", handleUserOffline);
+    socket.on("voice-transcript-broadcast", handleVoiceTranscript);
+    socket.on("ai-thinking-voice", handleAiThinkingVoice);
+    socket.on("ai-stopped-thinking-voice", handleAiStoppedThinkingVoice);
+    socket.on("ai-speaking-voice", handleAiSpeakingVoice);
 
     return () => {
       socket.off("call-ringing", handleCallRinging);
@@ -233,6 +333,10 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
       socket.off("call-ended", handleCallEnded);
       socket.off("call-busy", handleCallBusy);
       socket.off("user-offline", handleUserOffline);
+      socket.off("voice-transcript-broadcast", handleVoiceTranscript);
+      socket.off("ai-thinking-voice", handleAiThinkingVoice);
+      socket.off("ai-stopped-thinking-voice", handleAiStoppedThinkingVoice);
+      socket.off("ai-speaking-voice", handleAiSpeakingVoice);
     };
   }, [user, createPeer, resetCall]);
 
