@@ -1,17 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Search, Globe2 } from "lucide-react";
+import { LogOut, Search, Globe2, Plus, Compass } from "lucide-react";
 import Avatar from "./Avatar";
-import { Conversation, ConversationUser, DirectMessageEntry, SelectedChat } from "../types/conversation.types";
+import { ConversationUser, Conversation, DirectMessageEntry, SelectedChat } from "../types/conversation.types";
+import { Community } from "../types/community.types";
 import { useAuth } from "../context/AuthContext";
 
 interface SidebarProps {
   currentUsername: string;
-  communityConversation: Conversation | null;
+  communities: Community[];
   directMessages: DirectMessageEntry[];
   selectedChat: SelectedChat | null;
-  onSelectCommunity: () => void;
+  onSelectCommunity: (community: Community) => void;
   onSelectUser: (user: ConversationUser, conversation: Conversation | null) => void;
+  onCreateCommunity: () => void;
+  onBrowseCommunities: () => void;
   isMobile?: boolean;
 }
 
@@ -20,11 +23,13 @@ const formatPreviewTime = (isoDate: string): string =>
 
 const Sidebar = ({
   currentUsername,
-  communityConversation,
+  communities,
   directMessages,
   selectedChat,
   onSelectCommunity,
   onSelectUser,
+  onCreateCommunity,
+  onBrowseCommunities,
   isMobile = false,
 }: SidebarProps) => {
   const { logout } = useAuth();
@@ -39,8 +44,6 @@ const Sidebar = ({
   const filteredDirectMessages = directMessages.filter((entry) =>
     entry.user.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
   );
-
-  const isCommunityActive = selectedChat?.kind === "community";
 
   return (
     <div
@@ -76,24 +79,51 @@ const Sidebar = ({
 
       <div className="flex-1 min-h-0 overflow-y-auto mt-4 space-y-4">
         <div>
-          <p className="text-[11px] font-semibold text-purple-400 uppercase tracking-wider mb-2">Pinned</p>
-          <button
-            onClick={onSelectCommunity}
-            disabled={!communityConversation}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-colors ${
-              isCommunityActive ? "bg-purple-100" : "hover:bg-purple-50"
-            }`}
-          >
-            <span className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white shrink-0">
-              <Globe2 className="w-4 h-4" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-slate-800 truncate">
-                🌍 VedConnect Community
-              </span>
-              <span className="block text-xs text-slate-400 truncate">Everyone is here</span>
-            </span>
-          </button>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-semibold text-purple-400 uppercase tracking-wider">Communities</p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onBrowseCommunities}
+                aria-label="Discover communities"
+                title="Discover communities"
+                className="p-1 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg"
+              >
+                <Compass className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={onCreateCommunity}
+                aria-label="Create community"
+                title="Create community"
+                className="p-1 text-purple-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1">
+            {communities.map((community) => {
+              const isActive = selectedChat?.kind === "community" && selectedChat.communityId === community.id;
+              return (
+                <button
+                  key={community.id}
+                  onClick={() => onSelectCommunity(community)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-colors ${
+                    isActive ? "bg-purple-100" : "hover:bg-purple-50"
+                  }`}
+                >
+                  <span className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white shrink-0">
+                    <Globe2 className="w-4 h-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-slate-800 truncate">{community.name}</span>
+                    <span className="block text-xs text-slate-400 truncate">
+                      {community.memberCount} member{community.memberCount === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div>

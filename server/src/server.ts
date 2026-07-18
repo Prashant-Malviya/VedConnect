@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import { createApp } from "./app";
 import { connectDB } from "./config/db";
 import { initSocket } from "./sockets";
-import { ensureCommunityConversation } from "./services/conversation.service";
+import { ensureDefaultCommunity } from "./services/community.service";
 
 dotenv.config();
 
@@ -14,7 +14,7 @@ const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 const start = async () => {
   try {
     await connectDB(MONGODB_URI);
-    await ensureCommunityConversation(); // Community must exist before requests come in
+    await ensureDefaultCommunity(); // default Community must exist before requests come in
 
     const app = createApp(CLIENT_URL);
     const server = http.createServer(app);

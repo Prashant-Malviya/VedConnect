@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Message } from "../types/message.types";
-import { Conversation, ConversationUser, DirectMessageEntry, SelectedChat } from "../types/conversation.types";
+import { ConversationUser, Conversation, DirectMessageEntry, SelectedChat } from "../types/conversation.types";
+import { Community } from "../types/community.types";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import TypingIndicator from "./TypingIndicator";
+import VedThinkingIndicator from "./VedThinkingIndicator";
 import Sidebar from "./Sidebar";
 import ChatHeader from "./ChatHeader";
 import EmptyState from "./EmptyState";
@@ -11,15 +13,18 @@ import EmptyState from "./EmptyState";
 interface ChatWindowProps {
   currentUsername: string;
   currentUserId: string;
-  communityConversation: Conversation | null;
+  communities: Community[];
   directMessages: DirectMessageEntry[];
   selectedChat: SelectedChat | null;
-  onSelectCommunity: () => void;
+  onSelectCommunity: (community: Community) => void;
   onSelectUser: (user: ConversationUser, conversation: Conversation | null) => void;
+  onCreateCommunity: () => void;
+  onBrowseCommunities: () => void;
   messages: Message[];
   onSend: (text: string) => void;
   isConnected: boolean;
   typingUsers: string[];
+  isVedThinking: boolean;
   isOtherUserOnline: boolean;
   activeConversationId: string | null;
   isSingleChatView?: boolean;
@@ -28,15 +33,18 @@ interface ChatWindowProps {
 const ChatWindow = ({
   currentUsername,
   currentUserId,
-  communityConversation,
+  communities,
   directMessages,
   selectedChat,
   onSelectCommunity,
   onSelectUser,
+  onCreateCommunity,
+  onBrowseCommunities,
   messages,
   onSend,
   isConnected,
   typingUsers,
+  isVedThinking,
   isOtherUserOnline,
   activeConversationId,
   isSingleChatView = false,
@@ -62,21 +70,25 @@ const ChatWindow = ({
           <div className="hidden md:flex">
             <Sidebar
               currentUsername={currentUsername}
-              communityConversation={communityConversation}
+              communities={communities}
               directMessages={directMessages}
               selectedChat={selectedChat}
               onSelectCommunity={onSelectCommunity}
               onSelectUser={onSelectUser}
+              onCreateCommunity={onCreateCommunity}
+              onBrowseCommunities={onBrowseCommunities}
             />
           </div>
           <div className="md:hidden">
             <Sidebar
               currentUsername={currentUsername}
-              communityConversation={communityConversation}
+              communities={communities}
               directMessages={directMessages}
               selectedChat={selectedChat}
               onSelectCommunity={onSelectCommunity}
               onSelectUser={onSelectUser}
+              onCreateCommunity={onCreateCommunity}
+              onBrowseCommunities={onBrowseCommunities}
               isMobile
             />
           </div>
@@ -90,6 +102,7 @@ const ChatWindow = ({
             <>
               <MessageList messages={messages} currentUserId={currentUserId} />
               <TypingIndicator typingUsers={typingUsers} />
+              {isVedThinking && <VedThinkingIndicator assistantName="Ved" />}
               <MessageInput onSend={onSend} disabled={!isConnected} conversationId={activeConversationId} />
             </>
           ) : (

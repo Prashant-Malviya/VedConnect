@@ -10,10 +10,14 @@ export interface SendMessageInput {
 
 export interface CreateMessageInput {
   conversationId: string;
-  senderId: string;
+  senderId?: string; // absent for AI-authored messages
   senderName: string;
   receiverId?: string;
   text: string;
+  senderType?: "USER" | "AI";
+  assistantName?: string;
+  aiModel?: string;
+  aiError?: boolean;
 }
 
 export type MessageStatus = "sent" | "delivered";

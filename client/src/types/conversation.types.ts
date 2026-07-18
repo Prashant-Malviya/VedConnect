@@ -13,6 +13,7 @@ export interface Conversation {
   _id: string;
   type: "group" | "private";
   name: string;
+  communityId: string | null;
   participants: string[];
   otherUser: ConversationUser | null;
   lastMessage: LastMessagePreview | null;
@@ -28,5 +29,5 @@ export interface DirectMessageEntry {
 
 // conversationId is null for a private chat until the first message is sent.
 export type SelectedChat =
-  | { kind: "community"; conversationId: string }
+  | { kind: "community"; conversationId: string; communityId: string; name: string; slug: string }
   | { kind: "private"; user: ConversationUser; conversationId: string | null };

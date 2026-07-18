@@ -1,13 +1,24 @@
 import { ConversationModel } from "../models/conversation.model";
 
+// Retained for backward compatibility with the pre-Communities bootstrap flow.
+// Community creation now goes through community.service.ts, which creates
+// the backing group Conversation via createGroupConversation below.
 export const COMMUNITY_NAME = "🌍 VedConnect Community";
 
 export const findCommunityConversation = async () => {
-  return ConversationModel.findOne({ type: "group" });
+  return ConversationModel.findOne({ type: "group", communityId: { $exists: false } });
 };
 
 export const createCommunityConversation = async () => {
   return ConversationModel.create({ type: "group", name: COMMUNITY_NAME, participants: [] });
+};
+
+// Every user-created (and the default) Community owns exactly one group
+// Conversation. The community doesn't exist yet at this point (it needs
+// this conversation's id), so communityId is attached afterwards by the
+// caller once the Community document has been created.
+export const createGroupConversation = async (name: string) => {
+  return ConversationModel.create({ type: "group", name, participants: [] });
 };
 
 export const addParticipant = async (conversationId: string, userId: string) => {

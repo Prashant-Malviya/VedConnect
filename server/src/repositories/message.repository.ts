@@ -17,3 +17,15 @@ export const updateMessageStatus = async (messageId: string, status: MessageStat
 export const findLastMessageForConversation = async (conversationId: string) => {
   return MessageModel.findOne({ conversationId }).sort({ createdAt: -1 });
 };
+
+// Latest N messages for a conversation, oldest-first - what ContextService
+// feeds to the AI prompt. Sorting desc-then-reverse is cheaper than an
+// unbounded ascending scan once a conversation has a long history.
+export const findRecentMessages = async (conversationId: string, limit: number) => {
+  const recent = await MessageModel.find({ conversationId }).sort({ createdAt: -1 }).limit(limit);
+  return recent.reverse();
+};
+
+export const deleteMessagesForConversation = async (conversationId: string) => {
+  return MessageModel.deleteMany({ conversationId });
+};
