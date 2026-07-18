@@ -1,6 +1,25 @@
-# VedConnect - Real-Time Chat Application
 
-A full-stack, real-time chat application built on the MERN stack with TypeScript throughout. It supports JWT authentication, a shared Community chat, one-to-one direct messages, online presence, typing indicators, and message delivery status.
+# 💬 VedConnect – Real-Time Chat Application
+
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](#)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](#)
+[![Node.js](https://img.shields.io/badge/Node.js-20-339933?logo=node.js&logoColor=white)](#)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](#)
+[![Socket.io](https://img.shields.io/badge/Socket.io-Real--Time-010101?logo=socketdotio)](#)
+
+A production-ready **real-time chat application** built using the **MERN Stack**, **TypeScript**, and **Socket.io**. The application supports secure JWT authentication, one-to-one messaging, a shared community chat, online presence, typing indicators, and real-time message delivery.
+
+---
+
+# 🌐 Live Demo
+
+| Service | URL |
+|---------|-----|
+| 🚀 Frontend | https://ved-connect-wbg8.vercel.app/ |
+| 🔗 Backend API | https://vedconnect-if8e.onrender.com |
+| ❤️ Health Check | https://vedconnect-if8e.onrender.com/health |
+
+<img width="1919" height="1124" alt="VedConnect" src="https://github.com/user-attachments/assets/36abd679-c040-40b9-a7dc-38a46fccd881" />
 
 ---
 
