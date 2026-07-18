@@ -16,6 +16,15 @@ export type CallUiState =
   | "connecting" // accepted, WebRTC handshake in progress
   | "ongoing"; // media flowing
 
+export interface VoiceTranscriptEntry {
+  callId: string;
+  speaker: string;
+  speakerType: "USER" | "AI";
+  userId?: string;
+  text: string;
+  timestamp: string;
+}
+
 export interface ActiveCall {
   callId: string;
   otherParticipant: CallParticipant;
@@ -23,6 +32,9 @@ export interface ActiveCall {
   uiState: CallUiState;
   startedAt: Date | null; // set once truly connected - drives the duration timer
   isMuted: boolean;
+  transcript: VoiceTranscriptEntry[];
+  isVedThinking: boolean;
+  isVedSpeaking: boolean;
 }
 
 export interface CallHistoryEntry {
