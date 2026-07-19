@@ -3,6 +3,7 @@ import { TranscriptContextService } from "./TranscriptContextService";
 import * as transcriptService from "./TranscriptService";
 import * as textToSpeechService from "./TextToSpeechService";
 import { extractSpokenQuery } from "./WakeWordService";
+import { toSpeechText } from "./SpeechText";
 import { getIO } from "../../sockets";
 import { TranscriptEntry } from "../../types/voice.types";
 
@@ -32,21 +33,27 @@ export const handleWakeWordTrigger = async (callId: string, triggeringText: stri
     const context = await contextService.getContext(callId);
     const reply = await generateVedReplyFromContext(context, query);
 
+    // Ved's reply is written with Markdown in mind (shared with text chat) -
+    // clean it to plain, speakable text before it's stored/spoken. This is
+    // the ONE place that happens; text chat keeps the original Markdown for
+    // its own renderer.
+    const speechText = toSpeechText(reply.text);
+
     const entry: TranscriptEntry = {
       callId,
       speaker: VED_ASSISTANT_NAME,
       speakerType: "AI",
-      text: reply.text,
+      text: speechText,
       timestamp: new Date(),
     };
     transcriptService.appendEntry(entry);
     io.to(room).emit("voice-transcript-broadcast", entry);
 
-    const tts = reply.isFallback ? null : await textToSpeechService.synthesizeOrNull(reply.text);
+    const tts = reply.isFallback ? null : await textToSpeechService.synthesizeOrNull(speechText);
 
     io.to(room).emit("ai-speaking-voice", {
       callId,
-      text: reply.text,
+      text: speechText,
       audioBase64: tts?.audioBase64 || null,
       audioMimeType: tts?.mimeType || null,
     });
