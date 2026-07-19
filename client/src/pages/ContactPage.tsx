@@ -40,7 +40,7 @@ const ContactPage = () => {
 
   return (
     <div>
-      <section className="bg-hero-gradient py-16 px-4 sm:px-6 text-center">
+      <section className="bg-hero-gradient py-16 px-4 sm:px-6 text-center animate-fade-in-up">
         <span className="text-xs font-semibold tracking-wide uppercase text-gold-400">Get in Touch</span>
         <h1 className="text-3xl sm:text-4xl font-bold text-white mt-2">Contact Us</h1>
         <p className="text-purple-100/90 max-w-xl mx-auto mt-4 leading-relaxed">
@@ -48,7 +48,7 @@ const ContactPage = () => {
         </p>
       </section>
 
-      <section className="max-w-5xl mx-auto py-16 px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-10">
+      <section className="max-w-5xl mx-auto py-16 px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in-up">
         <div className="space-y-6">
           <div className="bg-white rounded-2xl shadow-soft border border-purple-100/60 p-5 flex items-center gap-4 hover-lift hover:shadow-card">
             <div className="w-11 h-11 rounded-xl bg-purple-50 flex items-center justify-center text-purple-700 shrink-0">

@@ -7,8 +7,11 @@ import Logo from "./Logo";
 const NAV_LINKS = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
-  { to: "/contact", label: "Contact" },
+];
+
+const SECONDARY_NAV_LINKS = [
   { to: "/api-docs", label: "API Docs" },
+  { to: "/contact", label: "Contact" },
 ];
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -43,6 +46,11 @@ const Navbar = () => {
               Chat
             </NavLink>
           )}
+          {SECONDARY_NAV_LINKS.map((link) => (
+            <NavLink key={link.to} to={link.to} className={linkClass}>
+              {link.label}
+            </NavLink>
+          ))}
 
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
@@ -110,6 +118,16 @@ const Navbar = () => {
               <MessageCircle className="w-4 h-4" /> Chat
             </Link>
           )}
+          {SECONDARY_NAV_LINKS.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              onClick={() => setIsMenuOpen(false)}
+              className="px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 hover:bg-purple-50 hover:text-purple-700"
+            >
+              {link.label}
+            </Link>
+          ))}
 
           {isAuthenticated ? (
             <button

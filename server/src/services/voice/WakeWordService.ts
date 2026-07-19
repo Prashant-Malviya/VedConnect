@@ -1,15 +1,23 @@
 // Voice transcripts come from speech recognition, so they'll never contain
-// a literal "@" the way typed chat does - "hey ved", "ved", "at ved", and
-// "@ved" (in case a client-side STT engine or a pasted/typed fallback does
-// produce the symbol) are all treated as equivalent wake phrases.
-//
-// This is deliberately a separate module from utils/mention.util.ts rather
-// than a shared one: text-chat mentions and spoken wake words have
-// different false-positive risks (e.g. "ved" alone is fine to require as a
-// whole word in speech, but would be far too easy to trigger accidentally
-// in typed text if it weren't already anchored to "@"). Keeping them
-// separate lets each be tuned independently without the other regressing.
-const WAKE_WORD_PATTERNS = [/\bhey\s+ved\b/i, /\bat\s+ved\b/i, /@ved\b/i, /\bved\b/i];
+// a literal "@" the way typed chat does. This list intentionally covers a
+// wide range of natural ways someone might say Ved's name mid-conversation
+// - greetings, filler ("ohh ved"), the product name, and a couple of
+// common speech-to-text mishearings of "Ved" - so invoking the AI feels
+// natural rather than requiring one exact phrase.
+const WAKE_WORD_PATTERNS = [
+  /\bhey\s+ved(u|connect)?\b/i,
+  /\bhi\s+ved(u|connect)?\b/i,
+  /\bhello\s+ved(u|connect)?\b/i,
+  /\bhellow\s+ved(u|connect)?\b/i,
+  /\bat\s+ved\b/i,
+  /@ved\b/i,
+  /\boh+\s+ved\b/i,
+  /\bokay?\s+ved\b/i,
+  /\byo\s+ved\b/i,
+  /\bvedconnect\b/i,
+  /\bvedu\b/i,
+  /\bved\b/i,
+];
 
 export const detectsWakeWord = (text: string): boolean => {
   return WAKE_WORD_PATTERNS.some((pattern) => pattern.test(text));

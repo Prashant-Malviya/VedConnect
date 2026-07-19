@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Message } from "../types/message.types";
 import { ConversationUser, Conversation, DirectMessageEntry, SelectedChat } from "../types/conversation.types";
 import { Community } from "../types/community.types";
@@ -50,6 +51,7 @@ const ChatWindow = ({
   isSingleChatView = false,
 }: ChatWindowProps) => {
   const [isMobile, setIsMobile] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 768 : false));
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -62,9 +64,12 @@ const ChatWindow = ({
 
   const shouldShowSidebar = !isMobile || !isSingleChatView;
   const shouldShowChatPanel = !isMobile || isSingleChatView;
+  // Only meaningful on mobile, viewing a single chat (community or DM) full-screen -
+  // that's the view with no visible conversation list, so it needs an explicit way back.
+  const handleBack = isMobile && isSingleChatView ? () => navigate("/chat") : undefined;
 
   return (
-    <div className="flex flex-col md:flex-row w-full max-w-6xl gap-4 md:gap-0">
+    <div className="flex flex-col md:flex-row w-full max-w-6xl gap-4 md:gap-0 animate-fade-in-up">
       {shouldShowSidebar && (
         <>
           <div className="hidden md:flex">
@@ -96,8 +101,20 @@ const ChatWindow = ({
       )}
 
       {shouldShowChatPanel && (
-        <div className="flex flex-col flex-1 h-[80vh] bg-white rounded-3xl shadow-card border border-purple-100/60 overflow-hidden">
-          <ChatHeader selectedChat={selectedChat} isConnected={isConnected} isOtherUserOnline={isOtherUserOnline} />
+        // h-[80dvh] (not vh): mobile browsers resize the visible viewport as
+        // the address bar and on-screen keyboard show/hide, and `vh` doesn't
+        // track that - it's what caused the whole chat panel to visually grow
+        // instead of MessageList scrolling internally. `dvh` tracks the real,
+        // current visible viewport, so the panel's height stays put and
+        // MessageList's own overflow-y-auto (see MessageList.tsx) is the only
+        // thing that scrolls.
+        <div className="flex flex-col flex-1 h-[85dvh] md:h-[80vh] bg-white rounded-3xl shadow-card border border-purple-100/60 overflow-hidden">
+          <ChatHeader
+            selectedChat={selectedChat}
+            isConnected={isConnected}
+            isOtherUserOnline={isOtherUserOnline}
+            onBack={handleBack}
+          />
           {selectedChat ? (
             <>
               <MessageList messages={messages} currentUserId={currentUserId} />
