@@ -27,6 +27,78 @@ interface IncomingCallPayload {
 
 const MAX_TRANSCRIPT_ENTRIES = 200; // mirrors the server's TranscriptService cap
 
+// Common male-voice names across Chrome/Edge/Windows/macOS speech engines,
+// checked in order - the actual available set varies by OS/browser, so
+// this is a best-effort preference list, not a guarantee. Falls back to
+// any English voice, then to the browser's default if nothing matches.
+const PREFERRED_MALE_VOICE_NAMES = [
+  "Google UK English Male",
+  "Microsoft Guy",
+  "Microsoft David",
+  "Microsoft Mark",
+  "Daniel",
+  "Alex",
+  "Fred",
+];
+
+const getVoicesAsync = (): Promise<SpeechSynthesisVoice[]> => {
+  const synth = window.speechSynthesis;
+  const existing = synth.getVoices();
+  if (existing.length > 0) return Promise.resolve(existing);
+
+  // Chrome in particular loads its voice list asynchronously - on a fresh
+  // tab, getVoices() can return [] the first time it's called.
+  return new Promise((resolve) => {
+    const handleVoicesChanged = () => {
+      synth.removeEventListener("voiceschanged", handleVoicesChanged);
+      resolve(synth.getVoices());
+    };
+    synth.addEventListener("voiceschanged", handleVoicesChanged);
+    // Safety net in case voiceschanged never fires on some browser.
+    setTimeout(() => resolve(synth.getVoices()), 1000);
+  });
+};
+
+const pickPreferredVoice = (voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined => {
+  for (const name of PREFERRED_MALE_VOICE_NAMES) {
+    const match = voices.find((v) => v.name.includes(name));
+    if (match) return match;
+  }
+  return voices.find((v) => v.lang.startsWith("en")) || voices[0];
+};
+
+// Speaks text out loud using the browser's built-in speechSynthesis - no
+// API key, no network call, can't fail the way a cloud TTS provider can.
+// Used whenever the server doesn't return synthesized audio (TTS_PROVIDER
+// set to "browser", a missing/invalid cloud TTS key, or any request/
+// playback failure) - see handleAiSpeakingVoice below. onDone always
+// fires exactly once, even if the browser doesn't support speech
+// synthesis at all, so the "Ved is speaking..." indicator never gets
+// stuck on.
+const speakWithBrowserTTS = async (text: string, onDone: () => void): Promise<void> => {
+  const synth = window.speechSynthesis;
+  if (!synth) {
+    console.warn("VedConnect: speechSynthesis is not supported in this browser - Ved's reply will stay text-only.");
+    onDone();
+    return;
+  }
+
+  try {
+    synth.cancel(); // don't let overlapping replies talk over each other
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voice = pickPreferredVoice(await getVoicesAsync());
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.98;
+    utterance.pitch = 0.85; // slightly lower pitch reads less robotic/flat for most system voices
+    utterance.onend = onDone;
+    utterance.onerror = onDone;
+    synth.speak(utterance);
+  } catch (error) {
+    console.warn("VedConnect: browser speech synthesis failed:", error);
+    onDone();
+  }
+};
+
 // This is the only place in the app that owns a WebRTCPeer instance and
 // drives the offer/answer/ice-candidate exchange - components only ever
 // read `activeCall` and call the action functions below. Mounted once at
@@ -281,6 +353,7 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
 
     const handleAiSpeakingVoice = ({
       callId,
+      text,
       audioBase64,
       audioMimeType,
     }: {
@@ -291,13 +364,16 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
     }) => {
       setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: true } : prev));
 
-      // No audio (TTS unavailable/failed) - the reply still lands in the
-      // transcript via voice-transcript-broadcast, so just clear the
-      // "speaking" indicator shortly after; the UI falls back to text.
+      // No audio from the server (TTS_PROVIDER=browser, missing/invalid
+      // ElevenLabs key, or a failed request) - speak it ourselves using the
+      // browser's built-in speech synthesis instead of going silent. This
+      // has no network dependency and can't fail the way a cloud TTS call
+      // can, so Ved always actually speaks even if the cloud provider is
+      // down or unconfigured.
       if (!audioBase64) {
-        setTimeout(() => {
+        speakWithBrowserTTS(text, () => {
           setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
-        }, 1500);
+        });
         return;
       }
 
@@ -308,11 +384,16 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
         setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
       };
       audio.onerror = () => {
-        // Playback failed client-side - same graceful fallback as no-audio above.
-        setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
+        // Playback of the cloud audio failed client-side - fall back to
+        // browser speech rather than going silent.
+        speakWithBrowserTTS(text, () => {
+          setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
+        });
       };
       audio.play().catch(() => {
-        setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
+        speakWithBrowserTTS(text, () => {
+          setActiveCall((prev) => (prev && prev.callId === callId ? { ...prev, isVedSpeaking: false } : prev));
+        });
       });
     };
 
