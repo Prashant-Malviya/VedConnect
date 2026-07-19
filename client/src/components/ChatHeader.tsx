@@ -1,4 +1,4 @@
-import { Phone } from "lucide-react";
+import { Phone, ArrowLeft } from "lucide-react";
 import Logo from "./Logo";
 import { SelectedChat } from "../types/conversation.types";
 import { useCall } from "../context/CallContext";
@@ -7,9 +7,10 @@ interface ChatHeaderProps {
   selectedChat: SelectedChat | null;
   isConnected: boolean;
   isOtherUserOnline: boolean;
+  onBack?: () => void;
 }
 
-const ChatHeader = ({ selectedChat, isConnected, isOtherUserOnline }: ChatHeaderProps) => {
+const ChatHeader = ({ selectedChat, isConnected, isOtherUserOnline, onBack }: ChatHeaderProps) => {
   const { activeCall, startCall } = useCall();
 
   const title = !selectedChat
@@ -29,8 +30,17 @@ const ChatHeader = ({ selectedChat, isConnected, isOtherUserOnline }: ChatHeader
   const canCall = selectedChat?.kind === "private" && isOtherUserOnline && !activeCall;
 
   return (
-    <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-purple-100 bg-white/80 backdrop-blur rounded-t-3xl">
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-b border-purple-100 bg-white/80 backdrop-blur rounded-t-3xl">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {onBack && (
+          <button
+            onClick={onBack}
+            aria-label="Back to conversations"
+            className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-purple-600 hover:bg-purple-50 transition-colors -ml-1"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
         <Logo size="sm" withText={false} />
         <div className="min-w-0">
           <p className="font-semibold text-slate-800 truncate">{title}</p>
@@ -52,7 +62,7 @@ const ChatHeader = ({ selectedChat, isConnected, isOtherUserOnline }: ChatHeader
         )}
 
         <span
-          className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${
+          className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${
             isConnected ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
           }`}
         >

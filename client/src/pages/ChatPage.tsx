@@ -333,7 +333,7 @@ const ChatPage = () => {
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-soft-gradient flex flex-col items-center py-8 px-4">
-      <div className="text-center mb-5">
+      <div className="text-center mb-5 animate-fade-in-up">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Your Conversations</h1>
         <p className="text-sm text-slate-500 mt-1">Real-time, secure, and always in sync - with Ved AI built in.</p>
       </div>

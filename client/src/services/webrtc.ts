@@ -70,9 +70,18 @@ export class WebRTCPeer {
   }
 
   setMuted(muted: boolean): void {
-    this.localStream?.getAudioTracks().forEach((track) => {
+    const audioTracks = this.localStream?.getAudioTracks() || [];
+    if (audioTracks.length === 0) {
+      // No local audio attached yet (attachLocalAudio() hasn't resolved, or
+      // getUserMedia was denied) - toggling here would silently do nothing,
+      // which is exactly the "mute button doesn't seem to work" symptom.
+      console.warn("VedConnect: setMuted() called but there is no local audio track to mute yet.");
+      return;
+    }
+    audioTracks.forEach((track) => {
       track.enabled = !muted;
     });
+    console.log(`VedConnect: microphone ${muted ? "muted" : "unmuted"} (${audioTracks.length} audio track(s))`);
   }
 
   close(): void {

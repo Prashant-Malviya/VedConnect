@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode, RefObject } from "react";
+import { toast } from "react-toastify";
 import { socket } from "../sockets/socket";
 import { WebRTCPeer } from "../services/webrtc";
 import { SpeechToTextService } from "../services/voice/SpeechToTextService";
@@ -180,10 +181,16 @@ export const CallProvider = ({ children }: { children: ReactNode }) => {
   }, [activeCall, resetCall]);
 
   const toggleMute = useCallback(() => {
+    if (!peerRef.current) {
+      console.warn("VedConnect: toggleMute() called with no active peer connection.");
+      toast.warn("Can't toggle mute right now - the call isn't fully connected yet.");
+      return;
+    }
     setActiveCall((prev) => {
       if (!prev) return prev;
       const nextMuted = !prev.isMuted;
       peerRef.current?.setMuted(nextMuted);
+      toast.info(nextMuted ? "Microphone muted" : "Microphone unmuted", { autoClose: 1500 });
       return { ...prev, isMuted: nextMuted };
     });
   }, []);
